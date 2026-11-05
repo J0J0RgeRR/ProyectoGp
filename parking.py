@@ -11,3 +11,14 @@ class Nodo:
 class ListaEnlazada:
     def __init__(self):
         self.cabeza = None
+
+    def agregar(self, nuevo_nodo):
+        if self.cabeza is None:
+            self.cabeza = nuevo_nodo
+        else:
+            actual = self.cabeza
+
+            while actual.siguiente is not None:
+                actual = actual.siguiente
+
+            actual.siguiente = nuevo_nodo
