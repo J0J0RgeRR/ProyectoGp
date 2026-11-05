@@ -7,3 +7,7 @@ class Nodo:
         self.precio_unitario = precio_unitario
         self.total = total
         self.siguiente = None
+
+class ListaEnlazada:
+    def __init__(self):
+        self.cabeza = None
