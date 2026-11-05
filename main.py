@@ -1,12 +1,9 @@
-import bathrooms as bath
-option = bath.seleccionarServicio()
+import paper
 
-if option == 4:
-    print("Regresando...")
-else:
-    price= bath.calcularPrecio(option)
-    confirmed = bath.confirmarCobro(price)
-    if confirmed:
-        print("Cobro finalizado")
-    else:
-        print("Cobro cancelado")
+stock = 0
+
+units = paper.ingresarRollos()
+stock = stock + units
+
+print(f"Unidades ingresadas: {units}")
+print(f"Unidades disponibles: {stock}")
