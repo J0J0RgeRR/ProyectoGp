@@ -1,4 +1,4 @@
-def seleccionar_servicio():
+def seleccionarServicio():
     while True:
         print("\n--- SERVICIOS DE BAÑOS ---")
         print("1. Sanitario: 1 unidad")
@@ -16,3 +16,15 @@ def seleccionar_servicio():
 
         except ValueError:
             print("Debe ingresar un número entero.")
+
+def calcularPrecio(option):
+    if option == 1:
+        price = 10
+    elif option == 2:
+        price = 20
+    elif option == 3:
+        price= 5
+    else:
+        return None
+
+    return price 
