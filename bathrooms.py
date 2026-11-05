@@ -28,3 +28,20 @@ def calcularPrecio(option):
         return None
 
     return price 
+
+def confirmarCobro(price):
+    while True:
+        print(f"Total a pagar: C${price}")
+        print("1. Confirmar")
+        print("2. Cancelar")
+
+        try:
+            option= int(input("Seleccione una opcion:  "))
+            if option == 1:
+                return True
+            elif option == 2:
+                return False
+            else:
+                print("Seleccione una opcion 1|2.")
+        except ValueError:
+            print("Debe ingresar un número entero")
