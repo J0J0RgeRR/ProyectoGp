@@ -43,3 +43,26 @@ def buscar_rato(identificador, tipo):
         actual = actual["siguiente"]
 
     return False
+
+def mostrar_cobros():
+    actual = cabeza
+
+    if actual is None:
+        print("\nNo hay cobros de parqueo registrados.")
+        return
+
+    print("\n========== HISTORIAL DE PARQUEO ==========")
+
+    while actual is not None:
+
+        print("\nIdentificación:", actual["identificador"])
+        print("Vehículo:", actual["tipo"])
+        print("Modalidad:", actual["modalidad"])
+
+        if actual["modalidad"] == "DIA":
+            print("Cantidad de días:", actual["cantidad"])
+
+        print("Precio unitario: C$", actual["precio"])
+        print("Total: C$", actual["total"])
+
+        actual = actual["siguiente"]
