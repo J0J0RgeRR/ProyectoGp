@@ -43,7 +43,7 @@ while running:
             running = False
             break
         elif option == 9:
-            if option == "administrador":
+            if role == "administrador":
                 print("Gestión de mercaderes pendiente.")
         elif option == 10:
             if role == "administrador":
