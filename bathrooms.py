@@ -1,3 +1,5 @@
+import paper 
+
 def seleccionarServicio():
     while True:
         print("\n--- SERVICIOS DE BAÑOS ---")
@@ -45,3 +47,31 @@ def confirmarCobro(price):
                 print("Seleccione una opcion 1|2.")
         except ValueError:
             print("Debe ingresar un número entero")
+
+def registrarCobro(stock):
+    option= seleccionarServicio()
+    if option == 4:
+        return stock
+
+    price= calcularPrecio(option)
+
+    if option == 1:
+        units = 1
+    elif option == 2:
+        units = 2
+    else: 
+        units = 0
+
+    if stock < units:
+        print(f"No hay suficiente papel. Disponible: {stock} unidades")
+        return stock
+
+    confirmed= confirmarCobro(price)
+
+    if confirmed:
+        stock= paper.descontarPapel(stock, units)
+        print(f"Cobro confirmado: C${price}")
+    else:
+        print("Cobro cancelado. No se descontó papel.")
+
+    return stock

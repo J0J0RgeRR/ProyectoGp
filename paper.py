@@ -26,3 +26,6 @@ def descontarPapel(stock, units):
         return stock
 
     return stock - units
+
+def consultarInventario(stock):
+    print(f"Unidades de papel dispobibles: {stock}")
