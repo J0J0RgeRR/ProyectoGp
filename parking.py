@@ -108,6 +108,93 @@ def solicitar_identificador(tipo, modalidad):
 
         print("Error: el campo no puede estar vacío. Intente nuevamente.")
 
+TARIFAS = {
+    "MOTO": {
+        "RATO": 20,
+        "DIA": 30
+    },
+    "BICICLETA": {
+        "RATO": 10,
+        "DIA": 20
+    },
+    "CARRO": {
+        "RATO": 30,
+        "DIA": 50
+    }
+}
+
+def calcular_cobro(tipo, modalidad):
+    precio = TARIFAS[tipo][modalidad]
+
+    if modalidad == "RATO":
+        cantidad = 1
+        total = precio
+
+    else:
+        while True:
+            try:
+                cantidad = int(input("Ingrese la cantidad de días (1 a 4): "))
+
+                if 1 <= cantidad <= 4:
+                    break
+
+                print("Error: la cantidad debe estar entre 1 y 4 días.")
+
+            except ValueError:
+                print("Error: debe ingresar un número entero. Intente nuevamente.")
+
+        total = precio * cantidad
+
+    return cantidad, precio, total
+
+def registrar_cobro(tipo, modalidad):
+    identificador = solicitar_identificador(tipo, modalidad)
+
+    if modalidad == "RATO":
+        if buscar_rato(identificador, tipo):
+            print("\nEste vehículo ya tiene registrado un parqueo por rato.")
+            return
+
+    cantidad, precio, total = calcular_cobro(tipo, modalidad)
+
+    print("\n========== RESUMEN DEL COBRO ==========")
+    print("Identificación:", identificador)
+    print("Vehículo:", tipo)
+    print("Modalidad:", modalidad)
+
+    if modalidad == "DIA":
+        print("Cantidad de días:", cantidad)
+
+    print("Precio unitario: C$", precio)
+    print("Total a pagar: C$", total)
+
+    while True:
+        confirmacion = input(
+            "\n¿Desea confirmar el cobro? (S/N): "
+        ).strip().upper()
+
+        if confirmacion == "S":
+            nuevo_nodo = crear_nodo(
+                identificador,
+                tipo,
+                modalidad,
+                cantidad,
+                precio,
+                total
+            )
+
+            agregar_cobro(nuevo_nodo)
+
+            print("\n¡Cobro registrado correctamente!")
+            break
+
+        elif confirmacion == "N":
+            print("\nRegistro de cobro cancelado.")
+            break
+
+        else:
+            print("Error: ingrese S para confirmar o N para cancelar.")
+
 def seleccionar_servicio():
     while True:
         print("\n========== SERVICIOS DE PARQUEO ==========")
