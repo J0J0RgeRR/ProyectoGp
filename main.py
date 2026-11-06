@@ -1,11 +1,12 @@
 import users
 import bathrooms
 import paper
-
+import parking 
 stock = 0
 sales = []
+running= True
 
-while True:
+while running:
     role = users.iniciarSesion()
 
     while True:
@@ -19,7 +20,7 @@ while True:
             stock = bathrooms.registrarCobro(stock, sales)
 
         elif option == 2:
-            print("Pendiente de integrar parqueo.")
+            parking.seleccionar_servicio()
 
         elif option == 3:
             print("Cobros a mercaderes pendientes.")
@@ -32,11 +33,19 @@ while True:
 
         elif option == 6:
             bathrooms.consultarCobros(sales)
+            parking.mostrar_cobros()
 
         elif option == 7:
-            if role == "administrador":
-                print("Gestión de mercaderes pendiente.")
+            paper.consultarInventario(stock)
 
         elif option == 8:
+            print("Programa finalizado.")
+            running = False
+            break
+        elif option == 9:
+            if option == "administrador":
+                print("Gestión de mercaderes pendiente.")
+        elif option == 10:
             if role == "administrador":
-                stock = paper.ingresarRollos(stock)
+                stock= paper.ingresarRollos(stock)
+        

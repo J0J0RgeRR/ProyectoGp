@@ -32,12 +32,18 @@ def mostrarMenu(role):
 
         if role == "administrador":
             print("6. Reportes diarios, semanales, quincenales y mensuales")
-            print("7. Gestionar mercaderes")
-            print("8. Ingresar papel")
-            limit = 8
         else:
-            print("6. Reporte del día actual")
-            limit = 6
+            print("6. Reporte del dia actual")
+        print("7. Consultar inventario de papel")
+        print("8. Finalizar el programa")
+
+        if role == "administrador":
+
+            print("9. Gestionar mercaderes")
+            print("10. Ingresar rollos de papel")
+            limit = 10
+        else:
+            limit = 8
 
         print("0. Cerrar sesión")
 
