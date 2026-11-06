@@ -11,3 +11,20 @@ def crear_nodo(identificador, tipo, modalidad, cantidad, precio, total):
     }
 
     return nuevo_nodo
+
+cabeza = None
+
+
+def agregar_cobro(nuevo_nodo):
+    global cabeza
+
+    if cabeza is None:
+        cabeza = nuevo_nodo
+
+    else:
+        actual = cabeza
+
+        while actual["siguiente"] is not None:
+            actual = actual["siguiente"]
+
+        actual["siguiente"] = nuevo_nodo
