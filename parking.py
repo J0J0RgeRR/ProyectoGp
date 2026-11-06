@@ -67,6 +67,29 @@ def mostrar_cobros():
 
         actual = actual["siguiente"]
 
+
+def seleccionar_modalidad(tipo):
+    while True:
+        print(f"\n========== PARQUEO DE {tipo} ==========")
+        print("1. Parqueo por un rato")
+        print("2. Parqueo por día")
+        print("3. Volver")
+
+        try:
+            opcion = int(input("Seleccione una modalidad: "))
+
+            if opcion == 1:
+                registrar_cobro(tipo, "RATO")
+            elif opcion == 2:
+                registrar_cobro(tipo, "DIA")
+            elif opcion == 3:
+                return
+            else:
+                print("Seleccione una opción del 1 al 3.")
+
+        except ValueError:
+            print("Error: debe ingresar un número entero. Intente nuevamente.")
+
 def seleccionar_servicio():
     while True:
         print("\n========== SERVICIOS DE PARQUEO ==========")
