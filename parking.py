@@ -66,3 +66,36 @@ def mostrar_cobros():
         print("Total: C$", actual["total"])
 
         actual = actual["siguiente"]
+
+def seleccionar_servicio():
+    while True:
+        print("\n========== SERVICIOS DE PARQUEO ==========")
+        print("1. Parqueo de moto")
+        print("2. Parqueo de bicicleta")
+        print("3. Parqueo de carro")
+        print("4. Mostrar cobros registrados")
+        print("5. Volver")
+
+        try:
+            opcion = int(input("Seleccione una opción: "))
+
+            if opcion == 1:
+                seleccionar_modalidad("MOTO")
+
+            elif opcion == 2:
+                seleccionar_modalidad("BICICLETA")
+
+            elif opcion == 3:
+                seleccionar_modalidad("CARRO")
+
+            elif opcion == 4:
+                mostrar_cobros()
+
+            elif opcion == 5:
+                return
+
+            else:
+                print("Seleccione una opción del 1 al 5.")
+
+        except ValueError:
+            print("Error: debe ingresar un número entero. Intente nuevamente.")
