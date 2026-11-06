@@ -107,9 +107,9 @@ def seleccionar_modalidad(tipo):
             opcion = int(input("Seleccione una modalidad: "))
 
             if opcion == 1:
-                registrar_cobro(tipo, "RATO")
+                registrar_pendiente(tipo, "RATO")
             elif opcion == 2:
-                registrar_cobro(tipo, "DIA")
+                registrar_pendiente(tipo, "DIA")
             elif opcion == 3:
                 return
             else:
@@ -238,7 +238,7 @@ def atender_siguiente():
         else:
             print("Error: ingrese S para confirmar o N para cancelar.")
 
-def registrar_cobro(tipo, modalidad):
+def registrar_pendiente(tipo, modalidad):
     identificador = solicitar_identificador(tipo, modalidad)
 
     nuevo_nodo = crear_nodo_pendiente(
@@ -261,10 +261,9 @@ def seleccionar_servicio():
         print("1. Parqueo de moto")
         print("2. Parqueo de bicicleta")
         print("3. Parqueo de carro")
-        print("4. Mostrar cobros registrados")
-        print("5. Atender siguiente vehículo")
-        print("6. Mostrar vehículos pendientes")
-        print("7. Volver")
+        print("4. Atender siguiente vehículo")
+        print("5. Mostrar vehículos pendientes")
+        print("6. Volver")
 
         try:
             opcion = int(input("Seleccione una opción: "))
@@ -279,19 +278,16 @@ def seleccionar_servicio():
                 seleccionar_modalidad("CARRO")
 
             elif opcion == 4:
-                mostrar_cobros()
-
-            elif opcion == 5:
                 atender_siguiente()
 
-            elif opcion == 6:
+            elif opcion == 5:
                 mostrar_pendientes()
 
-            elif opcion == 7:
+            elif opcion == 6:
                 return
 
             else:
-                print("Seleccione una opción del 1 al 7.")
+                print("Seleccione una opción del 1 al 6.")
 
         except ValueError:
             print("Error: debe ingresar un número entero. Intente nuevamente.")
