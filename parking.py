@@ -90,6 +90,24 @@ def seleccionar_modalidad(tipo):
         except ValueError:
             print("Error: debe ingresar un número entero. Intente nuevamente.")
 
+def solicitar_identificador(tipo, modalidad):
+    while True:
+        if tipo == "MOTO" or tipo == "CARRO":
+            identificador = input("Ingrese la placa del vehículo: ")
+
+        elif tipo == "BICICLETA" and modalidad == "RATO":
+            identificador = input("Ingrese el color de la bicicleta: ")
+
+        else:
+            identificador = input("Ingrese la cédula de identidad: ")
+
+        identificador = identificador.strip().upper()
+
+        if identificador != "":
+            return identificador
+
+        print("Error: el campo no puede estar vacío. Intente nuevamente.")
+
 def seleccionar_servicio():
     while True:
         print("\n========== SERVICIOS DE PARQUEO ==========")
