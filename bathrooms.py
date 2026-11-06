@@ -48,7 +48,7 @@ def confirmarCobro(price):
         except ValueError:
             print("Debe ingresar un número entero")
 
-def registrarCobro(stock):
+def registrarCobro(stock, sales):
     option= seleccionarServicio()
     if option == 4:
         return stock
@@ -56,10 +56,13 @@ def registrarCobro(stock):
     price= calcularPrecio(option)
 
     if option == 1:
+        service = "sanitario: 1 unidad"
         units = 1
     elif option == 2:
+        service = "sanitario: 2 unidad"
         units = 2
-    else: 
+    else:
+        service= "urinario para varones"
         units = 0
 
     if stock < units:
@@ -70,8 +73,26 @@ def registrarCobro(stock):
 
     if confirmed:
         stock= paper.descontarPapel(stock, units)
+
+        sale = {"service": service, "price": price}
+        sales.append(sale)
         print(f"Cobro confirmado: C${price}")
     else:
         print("Cobro cancelado. No se descontó papel.")
 
-    return stock
+    return stock 
+
+def consultarCobros(sales):
+    if len(sales) == 0:
+        print("No hay cobros registrados")
+        return 
+    total = 0
+
+    print("===Cobros de los baños ===")
+
+    for sale in sales:
+        print(f"{sale["service"]}: C${sale["price"]}")
+        total = total + sale["price"]
+
+    print(f"Total recibido: C${total}")
+
