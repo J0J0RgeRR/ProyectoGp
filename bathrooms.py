@@ -88,7 +88,7 @@ def consultarCobros(sales):
         return 
     total = 0
 
-    print("===Cobros de los baños ===")
+    print("\n========== HISTORIAL DE BAÑOS ==========")
 
     for sale in sales:
         print(f"{sale["service"]}: C${sale["price"]}")
