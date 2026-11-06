@@ -1,33 +1,42 @@
+import users
 import bathrooms
 import paper
 
-stock = 18
+stock = 0
 sales = []
 
 while True:
-    print("\n--- PRUEBAS ---")
-    print("1. Registrar cobro")
-    print("2. Consultar inventario")
-    print("3. Consultar cobros")
-    print("4. Salir")
+    role = users.iniciarSesion()
 
-    try:
-        option = int(input("Seleccione una opción: "))
+    while True:
+        option = users.mostrarMenu(role)
 
-        if option == 1:
+        if option == 0:
+            print("Sesión cerrada.")
+            break
+
+        elif option == 1:
             stock = bathrooms.registrarCobro(stock, sales)
 
         elif option == 2:
-            paper.consultarInventario(stock)
+            print("Pendiente de integrar parqueo.")
 
         elif option == 3:
-            bathrooms.consultarCobros(sales)
+            print("Cobros a mercaderes pendientes.")
 
         elif option == 4:
-            break
+            print("Registro de gastos pendiente.")
 
-        else:
-            print("Seleccione una opción del 1 al 4.")
+        elif option == 5:
+            print("Caja pendiente.")
 
-    except ValueError:
-        print("Debe ingresar un número entero.")
+        elif option == 6:
+            bathrooms.consultarCobros(sales)
+
+        elif option == 7:
+            if role == "administrador":
+                print("Gestión de mercaderes pendiente.")
+
+        elif option == 8:
+            if role == "administrador":
+                stock = paper.ingresarRollos(stock)
