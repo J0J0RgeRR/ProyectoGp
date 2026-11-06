@@ -13,6 +13,8 @@ def crear_nodo(identificador, tipo, modalidad, cantidad, precio, total):
     return nuevo_nodo
 
 cabeza = None
+frente = None
+final = None
 
 
 def agregar_cobro(nuevo_nodo):
@@ -29,20 +31,27 @@ def agregar_cobro(nuevo_nodo):
 
         actual["siguiente"] = nuevo_nodo
 
-def buscar_rato(identificador, tipo):
-    actual = cabeza
+def crear_nodo_pendiente(identificador, tipo, modalidad):
+    nuevo_nodo = {
+        "identificador": identificador,
+        "tipo": tipo,
+        "modalidad": modalidad,
+        "siguiente": None
+    }
 
-    while actual is not None:
+    return nuevo_nodo
 
-        if (actual["identificador"] == identificador
-                and actual["tipo"] == tipo
-                and actual["modalidad"] == "RATO"):
+def agregar_pendiente(nuevo_nodo):
+    global frente, final
 
-            return True
+    if frente is None:
+        frente = nuevo_nodo
+        final = nuevo_nodo
 
-        actual = actual["siguiente"]
+    else:
+        final["siguiente"] = nuevo_nodo
+        final = nuevo_nodo
 
-    return False
 
 def mostrar_cobros():
     actual = cabeza
@@ -66,6 +75,25 @@ def mostrar_cobros():
         print("Total: C$", actual["total"])
 
         actual = actual["siguiente"]
+
+def mostrar_pendientes():
+    actual = frente
+    posicion = 1
+
+    if actual is None:
+        print("\nNo hay vehículos pendientes de atención.")
+        return
+
+    print("\n========== VEHÍCULOS PENDIENTES ==========")
+
+    while actual is not None:
+        print("\nPosición:", posicion)
+        print("Identificación:", actual["identificador"])
+        print("Vehículo:", actual["tipo"])
+        print("Modalidad:", actual["modalidad"])
+
+        actual = actual["siguiente"]
+        posicion += 1
 
 
 def seleccionar_modalidad(tipo):
@@ -147,22 +175,31 @@ def calcular_cobro(tipo, modalidad):
 
     return cantidad, precio, total
 
-def registrar_cobro(tipo, modalidad):
-    identificador = solicitar_identificador(tipo, modalidad)
+def atender_siguiente():
+    global frente, final
 
-    if modalidad == "RATO":
-        if buscar_rato(identificador, tipo):
-            print("\nEste vehículo ya tiene registrado un parqueo por rato.")
-            return
+    if frente is None:
+        print("\nNo hay vehículos pendientes de atención.")
+        return
 
-    cantidad, precio, total = calcular_cobro(tipo, modalidad)
+    actual = frente
+
+    print("\n========== ATENCIÓN DE VEHÍCULO ==========")
+    print("Identificación:", actual["identificador"])
+    print("Vehículo:", actual["tipo"])
+    print("Modalidad:", actual["modalidad"])
+
+    cantidad, precio, total = calcular_cobro(
+        actual["tipo"],
+        actual["modalidad"]
+    )
 
     print("\n========== RESUMEN DEL COBRO ==========")
-    print("Identificación:", identificador)
-    print("Vehículo:", tipo)
-    print("Modalidad:", modalidad)
+    print("Identificación:", actual["identificador"])
+    print("Vehículo:", actual["tipo"])
+    print("Modalidad:", actual["modalidad"])
 
-    if modalidad == "DIA":
+    if actual["modalidad"] == "DIA":
         print("Cantidad de días:", cantidad)
 
     print("Precio unitario: C$", precio)
@@ -174,10 +211,11 @@ def registrar_cobro(tipo, modalidad):
         ).strip().upper()
 
         if confirmacion == "S":
+
             nuevo_nodo = crear_nodo(
-                identificador,
-                tipo,
-                modalidad,
+                actual["identificador"],
+                actual["tipo"],
+                actual["modalidad"],
                 cantidad,
                 precio,
                 total
@@ -185,15 +223,37 @@ def registrar_cobro(tipo, modalidad):
 
             agregar_cobro(nuevo_nodo)
 
-            print("\n¡Cobro registrado correctamente!")
+            frente = frente["siguiente"]
+
+            if frente is None:
+                final = None
+
+            print("\n¡Vehículo atendido y cobro registrado!")
             break
 
         elif confirmacion == "N":
-            print("\nRegistro de cobro cancelado.")
+            print("\nCobro cancelado. El vehículo permanece pendiente.")
             break
 
         else:
             print("Error: ingrese S para confirmar o N para cancelar.")
+
+def registrar_cobro(tipo, modalidad):
+    identificador = solicitar_identificador(tipo, modalidad)
+
+    nuevo_nodo = crear_nodo_pendiente(
+        identificador,
+        tipo,
+        modalidad
+    )
+
+    agregar_pendiente(nuevo_nodo)
+
+    print("\n¡Vehículo agregado a la cola de atención!")
+    print("Identificación:", identificador)
+    print("Vehículo:", tipo)
+    print("Modalidad:", modalidad)
+    print("Estado: Pendiente de atención.")
 
 def seleccionar_servicio():
     while True:
@@ -201,8 +261,11 @@ def seleccionar_servicio():
         print("1. Parqueo de moto")
         print("2. Parqueo de bicicleta")
         print("3. Parqueo de carro")
-        print("4. Volver")
-        
+        print("4. Mostrar cobros registrados")
+        print("5. Atender siguiente vehículo")
+        print("6. Mostrar vehículos pendientes")
+        print("7. Volver")
+
         try:
             opcion = int(input("Seleccione una opción: "))
 
@@ -216,10 +279,19 @@ def seleccionar_servicio():
                 seleccionar_modalidad("CARRO")
 
             elif opcion == 4:
+                mostrar_cobros()
+
+            elif opcion == 5:
+                atender_siguiente()
+
+            elif opcion == 6:
+                mostrar_pendientes()
+
+            elif opcion == 7:
                 return
 
             else:
-                print("Seleccione una opción del 1 al 4.")
+                print("Seleccione una opción del 1 al 7.")
 
         except ValueError:
             print("Error: debe ingresar un número entero. Intente nuevamente.")
