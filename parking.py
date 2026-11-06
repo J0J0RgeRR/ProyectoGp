@@ -201,9 +201,8 @@ def seleccionar_servicio():
         print("1. Parqueo de moto")
         print("2. Parqueo de bicicleta")
         print("3. Parqueo de carro")
-        print("4. Mostrar cobros registrados")
-        print("5. Volver")
-
+        print("4. Volver")
+        
         try:
             opcion = int(input("Seleccione una opción: "))
 
@@ -217,13 +216,10 @@ def seleccionar_servicio():
                 seleccionar_modalidad("CARRO")
 
             elif opcion == 4:
-                mostrar_cobros()
-
-            elif opcion == 5:
                 return
 
             else:
-                print("Seleccione una opción del 1 al 5.")
+                print("Seleccione una opción del 1 al 4.")
 
         except ValueError:
             print("Error: debe ingresar un número entero. Intente nuevamente.")
