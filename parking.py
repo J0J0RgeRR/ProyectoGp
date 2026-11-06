@@ -28,3 +28,18 @@ def agregar_cobro(nuevo_nodo):
             actual = actual["siguiente"]
 
         actual["siguiente"] = nuevo_nodo
+
+def buscar_rato(identificador, tipo):
+    actual = cabeza
+
+    while actual is not None:
+
+        if (actual["identificador"] == identificador
+                and actual["tipo"] == tipo
+                and actual["modalidad"] == "RATO"):
+
+            return True
+
+        actual = actual["siguiente"]
+
+    return False
