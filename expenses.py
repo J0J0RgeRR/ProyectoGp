@@ -40,3 +40,19 @@ def confirmarGasto(amount, description):
 
         except ValueError:
             print("Debe ingresar un número entero.")
+
+def registrarGasto(expenses):
+    amount = solicitarMonto()
+    description = solicitarDescripcion()
+    confirmed = confirmarGasto(amount, description)
+
+    if confirmed:
+        expense = {
+            "amount": amount,
+            "description": description
+        }
+
+        expenses.append(expense)
+        print("Gasto registrado correctamente.")
+    else:
+        print("Gasto cancelado.")
