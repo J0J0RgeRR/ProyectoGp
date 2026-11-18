@@ -96,3 +96,10 @@ def consultarCobros(sales):
 
     print(f"Total recibido: C${total}")
 
+def calcularTotalCobros(sales):
+    total = 0
+
+    for sale in sales:
+        total += sale["price"]
+
+    return total

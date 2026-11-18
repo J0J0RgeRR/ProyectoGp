@@ -10,3 +10,7 @@ def abrirCaja():
 
         except ValueError:
             print("Debe ingresar un número válido.")
+
+def calcularSaldo(initialAmount, totalIncome, totalExpenses):
+    balance= initialAmount + totalIncome -  totalExpenses
+    return balance
