@@ -1,10 +1,13 @@
+
 import users
 import bathrooms
 import paper
-import parking 
+import parking
+import rutas
+
 stock = 0
 sales = []
-running= True
+running = True
 
 while running:
     role = users.iniciarSesion()
@@ -42,10 +45,14 @@ while running:
             print("Programa finalizado.")
             running = False
             break
+
         elif option == 9:
             if role == "administrador":
                 print("Gestión de mercaderes pendiente.")
+
         elif option == 10:
             if role == "administrador":
-                stock= paper.ingresarRollos(stock)
-        
+                stock = paper.ingresarRollos(stock)
+
+        elif option == 11:
+            rutas.consultar_ruta()
