@@ -1,4 +1,7 @@
 
+from collections import deque
+
+# Creamos los nodos donde se guardan los cobros
 def crear_nodo(identificador, tipo, modalidad, cantidad, precio, total):
     nuevo_nodo = {
         "identificador": identificador,
@@ -12,11 +15,15 @@ def crear_nodo(identificador, tipo, modalidad, cantidad, precio, total):
 
     return nuevo_nodo
 
+
+# Aquí guardamos el inicio de la lista de cobros
 cabeza = None
-frente = None
-final = None
+
+# Usamos deque para guardar los vehículos que esperan ser atendidos
+pendientes = deque()
 
 
+# Agregamos un nuevo cobro al final de la lista enlazada
 def agregar_cobro(nuevo_nodo):
     global cabeza
 
@@ -31,28 +38,24 @@ def agregar_cobro(nuevo_nodo):
 
         actual["siguiente"] = nuevo_nodo
 
+
+# Creamos el registro de cada vehículo que queda pendiente
 def crear_nodo_pendiente(identificador, tipo, modalidad):
     nuevo_nodo = {
         "identificador": identificador,
         "tipo": tipo,
-        "modalidad": modalidad,
-        "siguiente": None
+        "modalidad": modalidad
     }
 
     return nuevo_nodo
 
+
+# Agregamos los vehículos al final de la cola
 def agregar_pendiente(nuevo_nodo):
-    global frente, final
-
-    if frente is None:
-        frente = nuevo_nodo
-        final = nuevo_nodo
-
-    else:
-        final["siguiente"] = nuevo_nodo
-        final = nuevo_nodo
+    pendientes.append(nuevo_nodo)
 
 
+# Consultamos todos los cobros que se han realizado
 def mostrar_cobros():
     actual = cabeza
 
@@ -76,28 +79,32 @@ def mostrar_cobros():
 
         actual = actual["siguiente"]
 
-def mostrar_pendientes():
-    actual = frente
-    posicion = 1
 
-    if actual is None:
+# Mostramos los vehículos que todavía están esperando
+def mostrar_pendientes():
+
+    if not pendientes:
         print("\nNo hay vehículos pendientes de atención.")
         return
 
     print("\n========== VEHÍCULOS PENDIENTES ==========")
 
-    while actual is not None:
+    posicion = 1
+
+    for actual in pendientes:
+
         print("\nPosición:", posicion)
         print("Identificación:", actual["identificador"])
         print("Vehículo:", actual["tipo"])
         print("Modalidad:", actual["modalidad"])
 
-        actual = actual["siguiente"]
         posicion += 1
 
 
+# Le preguntamos al usuario qué modalidad de parqueo necesita
 def seleccionar_modalidad(tipo):
     while True:
+
         print(f"\n========== PARQUEO DE {tipo} ==========")
         print("1. Parqueo por un rato")
         print("2. Parqueo por día")
@@ -108,18 +115,25 @@ def seleccionar_modalidad(tipo):
 
             if opcion == 1:
                 registrar_pendiente(tipo, "RATO")
+
             elif opcion == 2:
                 registrar_pendiente(tipo, "DIA")
+
             elif opcion == 3:
                 return
+
             else:
                 print("Seleccione una opción del 1 al 3.")
 
         except ValueError:
             print("Error: debe ingresar un número entero. Intente nuevamente.")
 
+
+# Pedimos el dato que identifica a cada vehículo
+
 def solicitar_identificador(tipo, modalidad):
     while True:
+
         if tipo == "MOTO" or tipo == "CARRO":
             identificador = input("Ingrese la placa del vehículo: ")
 
@@ -131,11 +145,21 @@ def solicitar_identificador(tipo, modalidad):
 
         identificador = identificador.strip().upper()
 
-        if identificador != "":
+        if identificador == "":
+            print("Error: el campo no puede estar vacío. Intente nuevamente.")
+
+        elif tipo == "BICICLETA" and modalidad == "RATO":
+            if identificador.replace(" ", "").isalpha():
+                return identificador
+
+            print("Error: el color solo debe contener letras. Intente nuevamente.")
+
+        else:
             return identificador
 
-        print("Error: el campo no puede estar vacío. Intente nuevamente.")
 
+
+# Definimos los precios según el vehículo y la modalidad
 TARIFAS = {
     "MOTO": {
         "RATO": 20,
@@ -151,6 +175,8 @@ TARIFAS = {
     }
 }
 
+
+# Calculamos cuánto debe pagar el vehículo
 def calcular_cobro(tipo, modalidad):
     precio = TARIFAS[tipo][modalidad]
 
@@ -160,6 +186,7 @@ def calcular_cobro(tipo, modalidad):
 
     else:
         while True:
+
             try:
                 cantidad = int(input("Ingrese la cantidad de días (1 a 4): "))
 
@@ -175,14 +202,15 @@ def calcular_cobro(tipo, modalidad):
 
     return cantidad, precio, total
 
-def atender_siguiente():
-    global frente, final
 
-    if frente is None:
+# Atendemos el primer vehículo que llegó a la cola
+def atender_siguiente():
+
+    if not pendientes:
         print("\nNo hay vehículos pendientes de atención.")
         return
 
-    actual = frente
+    actual = pendientes[0]
 
     print("\n========== ATENCIÓN DE VEHÍCULO ==========")
     print("Identificación:", actual["identificador"])
@@ -206,6 +234,7 @@ def atender_siguiente():
     print("Total a pagar: C$", total)
 
     while True:
+
         confirmacion = input(
             "\n¿Desea confirmar el cobro? (S/N): "
         ).strip().upper()
@@ -223,22 +252,24 @@ def atender_siguiente():
 
             agregar_cobro(nuevo_nodo)
 
-            frente = frente["siguiente"]
-
-            if frente is None:
-                final = None
+            # Quitamos de la cola al vehículo que ya fue atendido
+            pendientes.popleft()
 
             print("\n¡Vehículo atendido y cobro registrado!")
             break
 
         elif confirmacion == "N":
+
             print("\nCobro cancelado. El vehículo permanece pendiente.")
             break
 
         else:
             print("Error: ingrese S para confirmar o N para cancelar.")
 
+
+# Registramos el vehículo para que espere su turno
 def registrar_pendiente(tipo, modalidad):
+
     identificador = solicitar_identificador(tipo, modalidad)
 
     nuevo_nodo = crear_nodo_pendiente(
@@ -255,8 +286,11 @@ def registrar_pendiente(tipo, modalidad):
     print("Modalidad:", modalidad)
     print("Estado: Pendiente de atención.")
 
+
+# Menú donde se seleccionan los servicios de parqueo
 def seleccionar_servicio():
     while True:
+
         print("\n========== SERVICIOS DE PARQUEO ==========")
         print("1. Parqueo de moto")
         print("2. Parqueo de bicicleta")
