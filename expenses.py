@@ -56,3 +56,14 @@ def registrarGasto(expenses):
         print("Gasto registrado correctamente.")
     else:
         print("Gasto cancelado.")
+
+def consultarGastos(expenses):
+    if len(expenses) == 0:
+        return "No hay gastos registrados."
+
+    total = 0
+    for expense in expenses:
+        total += expense["amount"]
+
+
+    return expenses, total
