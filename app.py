@@ -4,6 +4,7 @@ from flask import Flask, redirect, render_template, request, session, url_for
 
 import bathrooms
 import paper
+import parking
 import rutas
 import users
 
@@ -94,7 +95,7 @@ def cobrarBaños():
     return render_template(
         "index.html",
         role=role,
-        page="banos",
+        page="baños",
         error=error,
         message=message,
         sales=sales,
@@ -162,7 +163,7 @@ def consultarRutas():
             path = rutas.buscarRuta(origin, destination)
 
             if path is None:
-                error = "No hay un recorrido entre esas zonas."
+                error = "No hay un recorrido entre esas dos zonas."
 
     return render_template(
         "index.html",
@@ -173,6 +174,84 @@ def consultarRutas():
         destination=destination,
         path=path,
         error=error
+    )
+
+
+@app.route("/parqueo", methods=["GET", "POST"])
+def gestionarParqueo():
+    role = session.get("role")
+
+    if role not in ("administrador", "trabajador"):
+        return redirect(url_for("inicio"))
+
+    error = None
+    message = session.pop("parkingMessage", None)
+
+    if request.method == "POST":
+        action = request.form.get("action", "")
+
+        if action == "registrar":
+            error = parking.registrarPendiente(
+                request.form.get("vehicleType", ""),
+                request.form.get("mode", ""),
+                request.form.get("identifier", "")
+            )
+
+            message = "Vehículo agregado a la fila de atención."
+
+        elif action == "retirar":
+            error = parking.retirarSiguiente(
+                request.form.get("ticket", "")
+            )
+
+            message = "Vehículo retirado de la fila. No se realizó ningún cobro."
+
+        elif action == "atender":
+            record, error = parking.atenderSiguiente(
+                request.form.get("days", "1"),
+                request.form.get("ticket", ""),
+                True
+            )
+
+            if error is None:
+                message = (
+                    f"Vehículo atendido. "
+                    f"Cobro confirmado: C$ {record['total']:.2f}"
+                )
+
+        else:
+            error = "Seleccioná una operación válida."
+
+        if error is None:
+            session["parkingMessage"] = message
+            return redirect(url_for("gestionarParqueo"))
+
+        message = None
+
+    first = parking.obtenerSiguiente()
+    unitPrice = 0
+
+    if first is not None:
+        charge, chargeError = parking.calcularCobro(
+            first["tipo"], first["modalidad"], 1
+        )
+
+        if chargeError is None:
+            unitPrice = charge["precio"]
+
+    history, totalParking = parking.consultarCobros()
+
+    return render_template(
+        "index.html",
+        role=role,
+        page="parqueo",
+        error=error,
+        message=message,
+        waiting=parking.consultarPendientes(),
+        first=first,
+        unitPrice=unitPrice,
+        history=history,
+        totalParking=totalParking
     )
 
 

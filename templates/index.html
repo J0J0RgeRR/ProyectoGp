@@ -26,6 +26,14 @@
             .card {
                 @apply rounded-2xl border border-[#dce5db] bg-white p-5;
             }
+
+            .tableHead {
+                @apply bg-[#e7eee6];
+            }
+
+            .tableCell {
+                @apply p-3;
+            }
         }
     </style>
 </head>
@@ -35,7 +43,8 @@
     {% set isAdmin = role == "administrador" %}
     {% set titles = {
         "inicio": "Inicio",
-        "banos": "Cobros de baños",
+        "baños": "Cobros de baños",
+        "parqueo": "Parqueo",
         "inventario": "Inventario de papel",
         "rutas": "Rutas de la plaza"
     } %}
@@ -61,13 +70,20 @@
                     </li>
                     <li>
                         <a href="{{ url_for('cobrarBaños') }}"
-                           class="navLink {% if page == 'banos' %}bg-[#275150] font-semibold{% endif %}">
+                           class="navLink {% if page == 'baños' %}bg-[#275150] font-semibold{% endif %}">
                             Cobros de baños
                         </a>
                     </li>
-                    <li class="px-4 py-2 text-[#d0e3dc]">Parqueo</li>
+                    <li>
+                        <a href="{{ url_for('gestionarParqueo') }}"
+                           class="navLink {% if page == 'parqueo' %}bg-[#275150] font-semibold{% endif %}">
+                            Parqueo
+                        </a>
+                    </li>
+
                     <li class="px-4 py-2 text-[#d0e3dc]">Cobros a mercaderes</li>
                     <li class="px-4 py-2 text-[#d0e3dc]">Caja y gastos</li>
+
                     <li>
                         <a href="{{ url_for('consultarInventario') }}"
                            class="navLink {% if page == 'inventario' %}bg-[#275150] font-semibold{% endif %}">
@@ -129,7 +145,210 @@
 
             <section class="mt-8 rounded-3xl border border-[#dce5db] bg-white p-6 sm:p-9">
 
-                {% if page == "banos" %}
+                {% if page == "parqueo" %}
+                    <p class="text-xs font-bold tracking-widest text-[#506965]">
+                        ATENCIÓN DE VEHÍCULOS
+                    </p>
+                    <h1 class="mt-3 text-3xl font-bold">Parqueo</h1>
+                    <p class="mt-3 text-[#506965]">
+                        Registrá la llegada y atendé los vehículos en su orden.
+                    </p>
+
+                    <div class="mt-6 grid gap-5 xl:grid-cols-2">
+                        <section class="card">
+                            <h2 class="text-xl font-bold">Registrar llegada</h2>
+
+                            <form method="post" action="{{ url_for('gestionarParqueo') }}"
+                                  class="mt-5 space-y-4">
+                                <input type="hidden" name="action" value="registrar">
+
+                                <div>
+                                    <label for="vehicleType" class="text-sm font-semibold">
+                                        Vehículo
+                                    </label>
+                                    <select id="vehicleType" name="vehicleType"
+                                            class="field" required>
+                                        <option value="MOTO">Moto</option>
+                                        <option value="BICICLETA">Bicicleta</option>
+                                        <option value="CARRO">Carro</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="mode" class="text-sm font-semibold">
+                                        Modalidad
+                                    </label>
+                                    <select id="mode" name="mode" class="field" required>
+                                        <option value="RATO">Por un rato</option>
+                                        <option value="DIA">Por día</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label id="identifierLabel" for="identifier"
+                                           class="text-sm font-semibold">
+                                        Placa del vehículo
+                                    </label>
+                                    <input id="identifier" name="identifier"
+                                           class="field" required>
+                                </div>
+
+                                <button class="button" type="submit">
+                                    Agregar a la fila
+                                </button>
+                            </form>
+                        </section>
+
+                        <section class="card bg-[#f8f9f4]">
+                            <h2 class="text-xl font-bold">Siguiente vehículo</h2>
+
+                            {% if first %}
+                                <dl class="mt-5 space-y-2">
+                                    <div>
+                                        <dt class="inline text-[#506965]">Identificación:</dt>
+                                        <dd class="inline font-semibold">
+                                            {{ first["identificador"] }}
+                                        </dd>
+                                    </div>
+                                    <div>
+                                        <dt class="inline text-[#506965]">Vehículo:</dt>
+                                        <dd class="inline">{{ first["tipo"] }}</dd>
+                                    </div>
+                                    <div>
+                                        <dt class="inline text-[#506965]">Modalidad:</dt>
+                                        <dd class="inline">
+                                            {{ "Por día" if first["modalidad"] == "DIA" else "Por un rato" }}
+                                        </dd>
+                                    </div>
+                                </dl>
+
+                                <form id="attendanceForm" method="post"
+                                      action="{{ url_for('gestionarParqueo') }}"
+                                      class="mt-5" data-price="{{ unitPrice }}">
+                                    <input type="hidden" name="ticket"
+                                           value="{{ first['webToken'] }}">
+
+                                    {% if first["modalidad"] == "DIA" %}
+                                        <label for="days" class="text-sm font-semibold">
+                                            Cantidad de días (1 a 4)
+                                        </label>
+                                        <input id="days" name="days" type="number"
+                                               min="1" max="4" step="1" value="1"
+                                               required class="field">
+                                    {% else %}
+                                        <input name="days" type="hidden" value="1">
+                                    {% endif %}
+
+                                    <p class="mt-4 text-sm text-[#506965]">
+                                        Precio unitario: C${{ "%.2f"|format(unitPrice) }}
+                                    </p>
+
+                                    <p class="my-5 text-2xl font-bold">
+                                        Total: C$<span id="parkingTotal">{{ "%.2f"|format(unitPrice) }}</span>
+                                    </p>
+
+                                    <div class="flex flex-wrap gap-3">
+                                        <button type="submit" name="action"
+                                                value="atender" class="button">
+                                            Confirmar cobro y atender
+                                        </button>
+
+                                        <button type="submit" name="action"
+                                                value="retirar" formnovalidate
+                                                class="rounded-xl border border-red-200 px-5 py-3 font-semibold text-red-700 hover:bg-red-50">
+                                            Retirar de la fila
+                                        </button>
+                                    </div>
+                                </form>
+                            {% else %}
+                                <p class="mt-5 text-[#506965]">
+                                    No hay vehículos pendientes de atención.
+                                </p>
+                            {% endif %}
+                        </section>
+                    </div>
+
+                    <section class="mt-8">
+                        <h2 class="text-xl font-bold">
+                            Vehículos pendientes · {{ waiting | length }}
+                        </h2>
+
+                        {% if waiting %}
+                            <div class="mt-4 overflow-x-auto">
+                                <table class="w-full text-left text-sm">
+                                    <thead class="tableHead">
+                                        <tr>
+                                            <th class="tableCell">Turno</th>
+                                            <th class="tableCell">Identificación</th>
+                                            <th class="tableCell">Vehículo</th>
+                                            <th class="tableCell">Modalidad</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for vehicle in waiting %}
+                                            <tr class="border-b border-[#dce5db]">
+                                                <td class="tableCell">{{ loop.index }}</td>
+                                                <td class="tableCell">{{ vehicle["identificador"] }}</td>
+                                                <td class="tableCell">{{ vehicle["tipo"] }}</td>
+                                                <td class="tableCell">
+                                                    {{ "Por día" if vehicle["modalidad"] == "DIA" else "Por un rato" }}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="mt-4 text-[#506965]">La fila está vacía.</p>
+                        {% endif %}
+                    </section>
+
+                    <section class="mt-8">
+                        <h2 class="text-xl font-bold">Cobros confirmados</h2>
+
+                        {% if history %}
+                            <div class="mt-4 overflow-x-auto">
+                                <table class="w-full text-left text-sm">
+                                    <thead class="tableHead">
+                                        <tr>
+                                            <th class="tableCell">Identificación</th>
+                                            <th class="tableCell">Vehículo</th>
+                                            <th class="tableCell">Modalidad</th>
+                                            <th class="tableCell">Días</th>
+                                            <th class="tableCell text-right">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for record in history %}
+                                            <tr class="border-b border-[#dce5db]">
+                                                <td class="tableCell">{{ record["identificador"] }}</td>
+                                                <td class="tableCell">{{ record["tipo"] }}</td>
+                                                <td class="tableCell">
+                                                    {{ "Por día" if record["modalidad"] == "DIA" else "Por un rato" }}
+                                                </td>
+                                                <td class="tableCell">
+                                                    {{ record["cantidad"] if record["modalidad"] == "DIA" else "—" }}
+                                                </td>
+                                                <td class="tableCell text-right">
+                                                    C${{ "%.2f"|format(record["total"]) }}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="mt-4 text-[#506965]">
+                                No hay cobros de parqueo registrados.
+                            </p>
+                        {% endif %}
+
+                        <p class="mt-5 text-xl font-bold">
+                            Total recibido: C${{ "%.2f"|format(totalParking) }}
+                        </p>
+                    </section>
+
+                {% elif page == "baños" %}
                     <p class="text-xs font-bold tracking-widest text-[#506965]">
                         SERVICIOS
                     </p>
@@ -151,7 +370,8 @@
                                     C${{ "%.2f"|format(price) }}
                                 </p>
 
-                                <form method="post" action="{{ url_for('cobrarBaños') }}"
+                                <form method="post"
+                                      action="{{ url_for('cobrarBaños') }}"
                                       class="mt-auto"
                                       onsubmit="return confirm('¿Confirmás el cobro de {{ label }} por C${{ price }}?');">
                                     <input type="hidden" name="service" value="{{ code }}">
@@ -168,17 +388,17 @@
                     {% if sales %}
                         <div class="mt-4 overflow-x-auto">
                             <table class="w-full text-left text-sm">
-                                <thead class="bg-[#e7eee6]">
+                                <thead class="tableHead">
                                     <tr>
-                                        <th class="p-3">Servicio</th>
-                                        <th class="p-3 text-right">Monto</th>
+                                        <th class="tableCell">Servicio</th>
+                                        <th class="tableCell text-right">Monto</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for sale in sales %}
                                         <tr class="border-b border-[#dce5db]">
-                                            <td class="p-3">{{ sale["service"] }}</td>
-                                            <td class="p-3 text-right">
+                                            <td class="tableCell">{{ sale["service"] }}</td>
+                                            <td class="tableCell text-right">
                                                 C${{ "%.2f"|format(sale["price"]) }}
                                             </td>
                                         </tr>
@@ -250,6 +470,7 @@
                                     {% endfor %}
                                 </select>
                             </div>
+
                             <div>
                                 <label for="destination" class="block text-sm font-semibold">
                                     Destino
@@ -266,6 +487,7 @@
                                 </select>
                             </div>
                         </div>
+
                         <button type="submit" class="button mt-5">Buscar ruta</button>
                     </form>
 
@@ -350,14 +572,18 @@
                 {% endif %}
 
                 <div>
-                    <label for="username" class="block text-sm font-semibold">Usuario</label>
+                    <label for="username" class="block text-sm font-semibold">
+                        Usuario
+                    </label>
                     <input id="username" name="username" type="text"
                            value="{{ username }}" autocomplete="username"
                            required class="field">
                 </div>
 
                 <div>
-                    <label for="password" class="block text-sm font-semibold">Contraseña</label>
+                    <label for="password" class="block text-sm font-semibold">
+                        Contraseña
+                    </label>
                     <input id="password" name="password" type="password"
                            autocomplete="current-password" required class="field">
                 </div>
@@ -372,6 +598,67 @@
             </p>
         </section>
     </main>
+{% endif %}
+
+{% if role and page == "parqueo" %}
+    <script>
+        const vehicleType = document.getElementById("vehicleType");
+        const mode = document.getElementById("mode");
+        const identifierLabel = document.getElementById("identifierLabel");
+
+        function actualizarIdentificacion() {
+            if (vehicleType.value === "BICICLETA") {
+                identifierLabel.textContent = mode.value === "RATO"
+                    ? "Color de la bicicleta"
+                    : "Cédula de identidad";
+            } else {
+                identifierLabel.textContent = "Placa del vehículo";
+            }
+        }
+
+        vehicleType.addEventListener("change", actualizarIdentificacion);
+        mode.addEventListener("change", actualizarIdentificacion);
+        actualizarIdentificacion();
+
+        const attendanceForm = document.getElementById("attendanceForm");
+        const days = document.getElementById("days");
+
+        if (attendanceForm) {
+            const price = Number(attendanceForm.dataset.price);
+            const totalLabel = document.getElementById("parkingTotal");
+
+            if (days) {
+                days.addEventListener("input", function () {
+                    const quantity = Number(days.value);
+
+                    if (Number.isInteger(quantity) && quantity >= 1 && quantity <= 4) {
+                        totalLabel.textContent = (price * quantity).toFixed(2);
+                    } else {
+                        totalLabel.textContent = "—";
+                    }
+                });
+            }
+
+            attendanceForm.addEventListener("submit", function (event) {
+                if (!event.submitter) {
+                    event.preventDefault();
+                    return;
+                }
+
+                let message;
+
+                if (event.submitter.value === "retirar") {
+                    message = "¿Retirar este vehículo de la fila sin cobrar?";
+                } else {
+                    message = "¿Confirmás el cobro de C$" + totalLabel.textContent + "?";
+                }
+
+                if (!confirm(message)) {
+                    event.preventDefault();
+                }
+            });
+        }
+    </script>
 {% endif %}
 </body>
 </html>

@@ -1,327 +1,287 @@
-
 from collections import deque
 
-# Creamos los nodos donde se guardan los cobros
-def crear_nodo(identificador, tipo, modalidad, cantidad, precio, total):
-    nuevo_nodo = {
-        "identificador": identificador,
-        "tipo": tipo,
-        "modalidad": modalidad,
-        "cantidad": cantidad,
-        "precio": precio,
-        "total": total,
+TARIFAS = {
+    "MOTO": {"RATO": 20, "DIA": 30},
+    "BICICLETA": {"RATO": 10, "DIA": 20},
+    "CARRO": {"RATO": 30, "DIA": 50}
+}
+
+pendientes = deque()
+cabeza = None
+nextTicket = 1
+
+
+def registrarPendiente(vehicleType, mode, identifier):
+    global nextTicket
+
+    if vehicleType not in TARIFAS or mode not in ("RATO", "DIA"):
+        return "Seleccioná un vehículo y una modalidad válidos."
+
+    identifier = identifier.strip().upper()
+
+    if identifier == "":
+        return "La identificación no puede estar vacía."
+
+    if vehicleType == "BICICLETA" and mode == "RATO":
+        if not identifier.replace(" ", "").isalpha():
+            return "El color de la bicicleta solo debe contener letras."
+
+    pendientes.append({
+        "identificador": identifier,
+        "tipo": vehicleType,
+        "modalidad": mode,
+        "webToken": str(nextTicket)
+    })
+
+    nextTicket += 1
+    return None
+
+
+def calcularCobro(vehicleType, mode, quantity=1):
+    if vehicleType not in TARIFAS or mode not in ("RATO", "DIA"):
+        return None, "Vehículo o modalidad no válidos."
+
+    if mode == "RATO":
+        quantity = 1
+    else:
+        try:
+            quantity = int(str(quantity).strip())
+        except ValueError:
+            return None, "La cantidad de días debe ser un número entero."
+
+        if quantity < 1 or quantity > 4:
+            return None, "La cantidad debe estar entre 1 y 4 días."
+
+    price = TARIFAS[vehicleType][mode]
+
+    charge = {
+        "cantidad": quantity,
+        "precio": price,
+        "total": price * quantity
+    }
+
+    return charge, None
+
+
+def obtenerSiguiente():
+    if not pendientes:
+        return None
+
+    return pendientes[0]
+
+
+def retirarSiguiente(ticket):
+    current = obtenerSiguiente()
+
+    if current is None:
+        return "No hay vehículos pendientes de atención."
+
+    if ticket != current["webToken"]:
+        return "La fila cambió. Revisá el siguiente vehículo."
+
+    pendientes.popleft()
+    return None
+
+
+def atenderSiguiente(quantity, ticket, confirmed=True):
+    global cabeza
+
+    current = obtenerSiguiente()
+
+    if current is None:
+        return None, "No hay vehículos pendientes de atención."
+
+    if ticket != current["webToken"]:
+        return None, "La fila cambió. Revisá el siguiente vehículo."
+
+    if not confirmed:
+        return None, None
+
+    charge, error = calcularCobro(
+        current["tipo"], current["modalidad"], quantity
+    )
+
+    if error is not None:
+        return None, error
+
+    node = {
+        "identificador": current["identificador"],
+        "tipo": current["tipo"],
+        "modalidad": current["modalidad"],
+        "cantidad": charge["cantidad"],
+        "precio": charge["precio"],
+        "total": charge["total"],
         "siguiente": None
     }
 
-    return nuevo_nodo
-
-
-# Aquí guardamos el inicio de la lista de cobros
-cabeza = None
-
-# Usamos deque para guardar los vehículos que esperan ser atendidos
-pendientes = deque()
-
-
-# Agregamos un nuevo cobro al final de la lista enlazada
-def agregar_cobro(nuevo_nodo):
-    global cabeza
-
     if cabeza is None:
-        cabeza = nuevo_nodo
-
+        cabeza = node
     else:
-        actual = cabeza
+        last = cabeza
 
-        while actual["siguiente"] is not None:
-            actual = actual["siguiente"]
+        while last["siguiente"] is not None:
+            last = last["siguiente"]
 
-        actual["siguiente"] = nuevo_nodo
+        last["siguiente"] = node
 
-
-# Creamos el registro de cada vehículo que queda pendiente
-def crear_nodo_pendiente(identificador, tipo, modalidad):
-    nuevo_nodo = {
-        "identificador": identificador,
-        "tipo": tipo,
-        "modalidad": modalidad
-    }
-
-    return nuevo_nodo
+    pendientes.popleft()
+    return node, None
 
 
-# Agregamos los vehículos al final de la cola
-def agregar_pendiente(nuevo_nodo):
-    pendientes.append(nuevo_nodo)
+def consultarPendientes():
+    return list(pendientes)
 
 
-# Consultamos todos los cobros que se han realizado
+def consultarCobros():
+    records = []
+    total = 0
+    current = cabeza
+
+    while current is not None:
+        records.append(current)
+        total += current["total"]
+        current = current["siguiente"]
+
+    return records, total
+
+
 def mostrar_cobros():
-    actual = cabeza
+    records, total = consultarCobros()
 
-    if actual is None:
-        print("\nNo hay cobros de parqueo registrados.")
+    if not records:
+        print("No hay cobros de parqueo registrados.")
         return
 
-    print("\n========== HISTORIAL DE PARQUEO ==========")
+    for record in records:
+        print(
+            f"{record['identificador']} | "
+            f"{record['tipo']} | {record['modalidad']}"
+        )
 
-    while actual is not None:
+        if record["modalidad"] == "DIA":
+            print(f"Días: {record['cantidad']}")
 
-        print("\nIdentificación:", actual["identificador"])
-        print("Vehículo:", actual["tipo"])
-        print("Modalidad:", actual["modalidad"])
+        print(f"Precio unitario: C$ {record['precio']}")
+        print(f"Total: C$ {record['total']}")
 
-        if actual["modalidad"] == "DIA":
-            print("Cantidad de días:", actual["cantidad"])
-
-        print("Precio unitario: C$", actual["precio"])
-        print("Total: C$", actual["total"])
-
-        actual = actual["siguiente"]
+    print(f"Total recibido: C$ {total}")
 
 
-# Mostramos los vehículos que todavía están esperando
-def mostrar_pendientes():
-
-    if not pendientes:
-        print("\nNo hay vehículos pendientes de atención.")
-        return
-
-    print("\n========== VEHÍCULOS PENDIENTES ==========")
-
-    posicion = 1
-
-    for actual in pendientes:
-
-        print("\nPosición:", posicion)
-        print("Identificación:", actual["identificador"])
-        print("Vehículo:", actual["tipo"])
-        print("Modalidad:", actual["modalidad"])
-
-        posicion += 1
-
-
-# Le preguntamos al usuario qué modalidad de parqueo necesita
-def seleccionar_modalidad(tipo):
+def solicitarOpcion(message, lower, upper):
     while True:
-
-        print(f"\n========== PARQUEO DE {tipo} ==========")
-        print("1. Parqueo por un rato")
-        print("2. Parqueo por día")
-        print("3. Volver")
-
         try:
-            opcion = int(input("Seleccione una modalidad: "))
+            option = int(input(message))
 
-            if opcion == 1:
-                registrar_pendiente(tipo, "RATO")
+            if lower <= option <= upper:
+                return option
 
-            elif opcion == 2:
-                registrar_pendiente(tipo, "DIA")
-
-            elif opcion == 3:
-                return
-
-            else:
-                print("Seleccione una opción del 1 al 3.")
+            print(f"Seleccione una opción del {lower} al {upper}.")
 
         except ValueError:
-            print("Error: debe ingresar un número entero. Intente nuevamente.")
+            print("Debe ingresar un número entero.")
 
 
-# Pedimos el dato que identifica a cada vehículo
-
-def solicitar_identificador(tipo, modalidad):
-    while True:
-
-        if tipo == "MOTO" or tipo == "CARRO":
-            identificador = input("Ingrese la placa del vehículo: ")
-
-        elif tipo == "BICICLETA" and modalidad == "RATO":
-            identificador = input("Ingrese el color de la bicicleta: ")
-
-        else:
-            identificador = input("Ingrese la cédula de identidad: ")
-
-        identificador = identificador.strip().upper()
-
-        if identificador == "":
-            print("Error: el campo no puede estar vacío. Intente nuevamente.")
-
-        elif tipo == "BICICLETA" and modalidad == "RATO":
-            if identificador.replace(" ", "").isalpha():
-                return identificador
-
-            print("Error: el color solo debe contener letras. Intente nuevamente.")
-
-        else:
-            return identificador
-
-
-
-# Definimos los precios según el vehículo y la modalidad
-TARIFAS = {
-    "MOTO": {
-        "RATO": 20,
-        "DIA": 30
-    },
-    "BICICLETA": {
-        "RATO": 10,
-        "DIA": 20
-    },
-    "CARRO": {
-        "RATO": 30,
-        "DIA": 50
-    }
-}
-
-
-# Calculamos cuánto debe pagar el vehículo
-def calcular_cobro(tipo, modalidad):
-    precio = TARIFAS[tipo][modalidad]
-
-    if modalidad == "RATO":
-        cantidad = 1
-        total = precio
-
-    else:
-        while True:
-
-            try:
-                cantidad = int(input("Ingrese la cantidad de días (1 a 4): "))
-
-                if 1 <= cantidad <= 4:
-                    break
-
-                print("Error: la cantidad debe estar entre 1 y 4 días.")
-
-            except ValueError:
-                print("Error: debe ingresar un número entero. Intente nuevamente.")
-
-        total = precio * cantidad
-
-    return cantidad, precio, total
-
-
-# Atendemos el primer vehículo que llegó a la cola
-def atender_siguiente():
-
-    if not pendientes:
-        print("\nNo hay vehículos pendientes de atención.")
-        return
-
-    actual = pendientes[0]
-
-    print("\n========== ATENCIÓN DE VEHÍCULO ==========")
-    print("Identificación:", actual["identificador"])
-    print("Vehículo:", actual["tipo"])
-    print("Modalidad:", actual["modalidad"])
-
-    cantidad, precio, total = calcular_cobro(
-        actual["tipo"],
-        actual["modalidad"]
-    )
-
-    print("\n========== RESUMEN DEL COBRO ==========")
-    print("Identificación:", actual["identificador"])
-    print("Vehículo:", actual["tipo"])
-    print("Modalidad:", actual["modalidad"])
-
-    if actual["modalidad"] == "DIA":
-        print("Cantidad de días:", cantidad)
-
-    print("Precio unitario: C$", precio)
-    print("Total a pagar: C$", total)
-
-    while True:
-
-        confirmacion = input(
-            "\n¿Desea confirmar el cobro? (S/N): "
-        ).strip().upper()
-
-        if confirmacion == "S":
-
-            nuevo_nodo = crear_nodo(
-                actual["identificador"],
-                actual["tipo"],
-                actual["modalidad"],
-                cantidad,
-                precio,
-                total
-            )
-
-            agregar_cobro(nuevo_nodo)
-
-            # Quitamos de la cola al vehículo que ya fue atendido
-            pendientes.popleft()
-
-            print("\n¡Vehículo atendido y cobro registrado!")
-            break
-
-        elif confirmacion == "N":
-
-            print("\nCobro cancelado. El vehículo permanece pendiente.")
-            break
-
-        else:
-            print("Error: ingrese S para confirmar o N para cancelar.")
-
-
-# Registramos el vehículo para que espere su turno
-def registrar_pendiente(tipo, modalidad):
-
-    identificador = solicitar_identificador(tipo, modalidad)
-
-    nuevo_nodo = crear_nodo_pendiente(
-        identificador,
-        tipo,
-        modalidad
-    )
-
-    agregar_pendiente(nuevo_nodo)
-
-    print("\n¡Vehículo agregado a la cola de atención!")
-    print("Identificación:", identificador)
-    print("Vehículo:", tipo)
-    print("Modalidad:", modalidad)
-    print("Estado: Pendiente de atención.")
-
-
-# Menú donde se seleccionan los servicios de parqueo
 def seleccionar_servicio():
     while True:
-
-        print("\n========== SERVICIOS DE PARQUEO ==========")
+        print("\n--- SERVICIOS DE PARQUEO ---")
         print("1. Parqueo de moto")
         print("2. Parqueo de bicicleta")
         print("3. Parqueo de carro")
         print("4. Atender siguiente vehículo")
         print("5. Mostrar vehículos pendientes")
         print("6. Volver")
+        print("7. Retirar siguiente vehículo sin cobrar")
 
-        try:
-            opcion = int(input("Seleccione una opción: "))
+        option = solicitarOpcion("Seleccione una opción: ", 1, 7)
 
-            if opcion == 1:
-                seleccionar_modalidad("MOTO")
+        if option == 6:
+            return
 
-            elif opcion == 2:
-                seleccionar_modalidad("BICICLETA")
+        elif option in (1, 2, 3):
+            vehicleType = {1: "MOTO", 2: "BICICLETA", 3: "CARRO"}[option]
 
-            elif opcion == 3:
-                seleccionar_modalidad("CARRO")
+            print("1. Por un rato\n2. Por día\n3. Volver")
+            modeOption = solicitarOpcion("Seleccione una modalidad: ", 1, 3)
 
-            elif opcion == 4:
-                atender_siguiente()
+            if modeOption == 3:
+                continue
 
-            elif opcion == 5:
-                mostrar_pendientes()
+            mode = "RATO" if modeOption == 1 else "DIA"
+            label = "Placa del vehículo: "
 
-            elif opcion == 6:
-                return
+            if vehicleType == "BICICLETA":
+                label = (
+                    "Color de la bicicleta: "
+                    if mode == "RATO"
+                    else "Cédula de identidad: "
+                )
 
+            error = registrarPendiente(vehicleType, mode, input(label))
+            print(error if error else "Vehículo agregado a la fila.")
+
+        elif option == 4:
+            current = obtenerSiguiente()
+
+            if current is None:
+                print("No hay vehículos pendientes.")
+                continue
+
+            print(
+                f"Vehículo: {current['tipo']} | "
+                f"{current['identificador']} | {current['modalidad']}"
+            )
+
+            quantity = 1
+
+            if current["modalidad"] == "DIA":
+                quantity = solicitarOpcion("Cantidad de días (1 a 4): ", 1, 4)
+
+            charge, error = calcularCobro(
+                current["tipo"], current["modalidad"], quantity
+            )
+
+            if error:
+                print(error)
+                continue
+
+            print(f"Total a pagar: C$ {charge['total']}")
+            print("1. Confirmar\n2. Cancelar")
+
+            confirmed = solicitarOpcion("Seleccione una opción: ", 1, 2) == 1
+
+            record, error = atenderSiguiente(
+                quantity, current["webToken"], confirmed
+            )
+
+            if error:
+                print(error)
+            elif record is None:
+                print("Cobro cancelado. El vehículo permanece pendiente.")
             else:
-                print("Seleccione una opción del 1 al 6.")
+                print("Vehículo atendido y cobro registrado.")
 
-        except ValueError:
-            print("Error: debe ingresar un número entero. Intente nuevamente.")
+        elif option == 5:
+            records = consultarPendientes()
+
+            if not records:
+                print("No hay vehículos pendientes.")
+
+            for position, record in enumerate(records, 1):
+                print(
+                    f"{position}. {record['identificador']} | "
+                    f"{record['tipo']} | {record['modalidad']}"
+                )
+
+        elif option == 7:
+            current = obtenerSiguiente()
+
+            if current is None:
+                print("No hay vehículos pendientes.")
+                continue
+
+            print(f"Vehículo que se retirará: {current['identificador']}")
+            print("1. Confirmar retiro\n2. Cancelar")
+
+            if solicitarOpcion("Seleccione una opción: ", 1, 2) == 1:
+                error = retirarSiguiente(current["webToken"])
+                print(error if error else "Vehículo retirado sin cobrar.")
