@@ -1,44 +1,131 @@
+import bathrooms
+import expenses
+
+
 def validarMonto(value):
-    try:
-        amount = float(value)
-    except (ValueError, TypeError):
-        return None, "Ingrese un número válido."
+    amount, error = expenses.validarMonto(value)
 
-    if not 0 <= amount < float("inf"):
-        return None, "El monto debe ser finito y mayor o igual a cero."
+    return amount, error
 
-    return round(amount, 2), None
+
+def validarCaja(currentCash, token):
+    if currentCash is None:
+        return "Primero abrí la caja desde Caja y gastos."
+
+    if token != currentCash["token"]:
+        return "La caja cambió. Recargá la página e intentá nuevamente."
+
+    return None
+
+
+def iniciarCaja(currentCash, value, sales, parkingTotal, expenseRecords, token):
+    if currentCash is not None:
+        return currentCash, "Ya hay una caja abierta."
+
+    amount, error = validarMonto(value)
+
+    if error is not None:
+        return None, error
+
+    bathroomTotal = bathrooms.calcularTotalCobros(sales)
+    expenseStart = len(expenseRecords)
+
+    currentCash = {
+        "initialAmount": amount,
+        "bathroomStart": bathroomTotal,
+        "parkingStart": parkingTotal,
+        "expenseStart": expenseStart,
+        "token": token
+    }
+
+    return currentCash, None
+
+
+def calcularSaldo(initialAmount, totalIncome, totalExpenses):
+    balance = initialAmount + totalIncome - totalExpenses
+    balance = round(balance, 2)
+
+    return balance
+
+
+def calcularDiferencia(expectedBalance, countedCash):
+    difference = countedCash - expectedBalance
+    difference = round(difference, 2)
+
+    return difference
+
+
+def resumirCaja(initialAmount, bathroomIncome, parkingIncome, merchantIncome, totalExpenses):
+    totalIncome = bathroomIncome + parkingIncome + merchantIncome
+    totalIncome = round(totalIncome, 2)
+
+    balance = calcularSaldo(initialAmount, totalIncome, totalExpenses)
+
+    summary = {
+        "initialAmount": initialAmount,
+        "bathroomIncome": bathroomIncome,
+        "parkingIncome": parkingIncome,
+        "merchantIncome": merchantIncome,
+        "totalIncome": totalIncome,
+        "totalExpenses": totalExpenses,
+        "balance": balance
+    }
+
+    return summary
+
+
+def consultarResumen(currentCash, sales, parkingTotal, expenseRecords):
+    if currentCash is None:
+        return None
+
+    bathroomIncome = bathrooms.calcularTotalCobros(sales) - currentCash["bathroomStart"]
+    parkingIncome = parkingTotal - currentCash["parkingStart"]
+
+    currentExpenses = expenseRecords[currentCash["expenseStart"]:]
+    totalExpenses = expenses.calcularTotalGastos(currentExpenses)
+
+    summary = resumirCaja(currentCash["initialAmount"], bathroomIncome, parkingIncome, 0, totalExpenses)
+
+    return summary
+
+
+def finalizarCaja(currentCash, cashClosings, value, summary):
+    if currentCash is None:
+        return None, "No hay una caja abierta."
+
+    countedCash, error = validarMonto(value)
+
+    if error is not None:
+        return currentCash, error
+
+    difference = calcularDiferencia(summary["balance"], countedCash)
+
+    summary["countedCash"] = countedCash
+    summary["difference"] = difference
+
+    cashClosings.append(summary)
+
+    return None, None
 
 
 def abrirCaja():
     while True:
-        amount, error = validarMonto(
-            input("Ingrese el monto inicial de caja: C$")
-        )
+        amount, error = validarMonto(input("Ingrese el monto inicial de caja: C$"))
 
         if error is None:
             return amount
+        else:
+            print(error)
 
-        print(error)
-
-
-def calcularSaldo(initialAmount, totalIncome, totalExpenses):
-    return round(initialAmount + totalIncome - totalExpenses, 2)
-
-
-def calcularDiferencia(expectedBalance, countedCash):
-    return round(countedCash - expectedBalance, 2)
 
 def cerrarCaja(expectedBalance):
     while True:
-        countedCash, error = validarMonto(
-            input("Ingrese el efectivo contado: C$")
-        )
+        countedCash, error = validarMonto(input("Ingrese el efectivo contado: C$"))
 
         if error is None:
             break
-
-        print(error)
+        else:
+            print(error)
 
     difference = calcularDiferencia(expectedBalance, countedCash)
 
@@ -64,27 +151,3 @@ def cerrarCaja(expectedBalance):
             return None
         else:
             print("Seleccione 1 o 2.")
-
-            
-def resumirCaja(
-    initialAmount,
-    bathroomIncome,
-    parkingIncome,
-    merchantIncome,
-    totalExpenses
-):
-    totalIncome = round(
-        bathroomIncome + parkingIncome + merchantIncome, 2
-    )
-
-    return {
-        "initialAmount": initialAmount,
-        "bathroomIncome": bathroomIncome,
-        "parkingIncome": parkingIncome,
-        "merchantIncome": merchantIncome,
-        "totalIncome": totalIncome,
-        "totalExpenses": totalExpenses,
-        "balance": calcularSaldo(
-            initialAmount, totalIncome, totalExpenses
-        )
-    }

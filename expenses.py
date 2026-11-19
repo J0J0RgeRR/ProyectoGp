@@ -1,15 +1,24 @@
-def guardarGasto(expenses, amount, description):
+def validarMonto(value):
     try:
-        amount = float(amount)
-    except (ValueError, TypeError):
-        return False, "Debe ingresar un número válido."
+        amount = float(value)
 
-    if not amount > 0 or amount == float("inf"):
-        return False, "El monto debe ser un número positivo y finito."
+        if amount >= 0:
+            amount = round(amount, 2)
+            return amount, None
+        else:
+            return None, "El monto no puede ser negativo."
 
-    amount = round(amount, 2)
+    except ValueError:
+        return None, "Ingrese un número válido."
 
-    if amount == 0:
+
+def guardarGasto(expenses, amount, description, balance=None):
+    amount, error = validarMonto(amount)
+
+    if error is not None:
+        return False, error
+
+    if amount <= 0:
         return False, "El monto mínimo es C$0.01."
 
     description = description.strip()
@@ -17,27 +26,41 @@ def guardarGasto(expenses, amount, description):
     if description == "":
         return False, "Debe ingresar una descripción del gasto."
 
+    if balance is not None and amount > balance:
+        return False, "El gasto supera el saldo disponible en caja."
+
     expense = {
         "amount": amount,
         "description": description
     }
 
     expenses.append(expense)
+
     return True, "Gasto registrado correctamente."
+
+
+def calcularTotalGastos(expenses):
+    total = 0
+
+    for expense in expenses:
+        total = total + expense["amount"]
+
+    total = round(total, 2)
+
+    return total
 
 
 def solicitarMonto():
     while True:
-        try:
-            amount = float(input("Ingrese el monto del gasto: C$"))
+        amount, error = validarMonto(input("Ingrese el monto del gasto: C$"))
 
-            if amount > 0:
-                return amount
+        if error is None and amount > 0:
+            return amount
 
+        if error is not None:
+            print(error)
+        else:
             print("El monto debe ser mayor que cero.")
-
-        except ValueError:
-            print("Debe ingresar un número válido.")
 
 
 def solicitarDescripcion():
@@ -58,25 +81,22 @@ def confirmarGasto(amount, description):
         print("1. Confirmar")
         print("2. Cancelar")
 
-        try:
-            option = int(input("Seleccione una opción: "))
+        option = input("Seleccione una opción: ").strip()
 
-            if option == 1:
-                return True
-            elif option == 2:
-                return False
-
+        if option == "1":
+            return True
+        elif option == "2":
+            return False
+        else:
             print("Seleccione una opción del 1 al 2.")
-
-        except ValueError:
-            print("Debe ingresar un número entero.")
 
 
 def registrarGasto(expenses):
     amount = solicitarMonto()
     description = solicitarDescripcion()
+    confirmed = confirmarGasto(amount, description)
 
-    if confirmarGasto(amount, description):
+    if confirmed:
         saved, message = guardarGasto(expenses, amount, description)
         print(message)
     else:
@@ -87,9 +107,6 @@ def consultarGastos(expenses):
     if len(expenses) == 0:
         return "No hay gastos registrados."
 
-    total = 0
-
-    for expense in expenses:
-        total += expense["amount"]
+    total = calcularTotalGastos(expenses)
 
     return expenses, total
