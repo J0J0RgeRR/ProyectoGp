@@ -1,13 +1,16 @@
+def agregarRollos(stock, rolls):
+    units = rolls * 18
+    return stock + units
+
+
 def ingresarRollos(stock):
     while True:
         try:
             rolls = int(input("Cantidad de rollos que ingresan: "))
 
             if rolls > 0:
-                units = rolls * 18
-                stock = stock + units
-
-                print(f"Se agregaron {units} unidades.")
+                stock = agregarRollos(stock, rolls)
+                print(f"Se agregaron {rolls * 18} unidades.")
                 return stock
             else:
                 print("La cantidad debe ser mayor que cero.")
@@ -27,5 +30,6 @@ def descontarPapel(stock, units):
 
     return stock - units
 
+
 def consultarInventario(stock):
-    print(f"Unidades de papel dispobibles: {stock}")
+    print(f"Unidades de papel disponibles: {stock}")

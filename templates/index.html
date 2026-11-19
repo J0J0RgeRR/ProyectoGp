@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Su Plaza al Día</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+    <style type="text/tailwindcss">
+        @layer components {
+            .field {
+                @apply mt-2 w-full rounded-xl border border-[#c9d4cb]
+                       bg-white px-4 py-3 outline-none
+                       focus:border-[#b48a40] focus:ring-2 focus:ring-[#e9cb85];
+            }
+
+            .button {
+                @apply rounded-xl bg-[#127768] px-5 py-3 font-semibold
+                       text-white hover:bg-[#0d6357];
+            }
+
+            .navLink {
+                @apply block rounded-xl px-4 py-3 hover:bg-[#275150];
+            }
+
+            .card {
+                @apply rounded-2xl border border-[#dce5db] bg-white p-5;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-[#f8f9f4] font-sans text-[#173b3b]">
+{% if role %}
+    {% set isAdmin = role == "administrador" %}
+    {% set titles = {
+        "inicio": "Inicio",
+        "banos": "Cobros de baños",
+        "inventario": "Inventario de papel",
+        "rutas": "Rutas de la plaza"
+    } %}
+
+    <div class="min-h-screen md:grid md:grid-cols-[240px_1fr]">
+        <aside class="flex flex-col bg-[#114145] p-6 text-white">
+            <p class="text-xl font-bold">Su Plaza al Día.</p>
+            <p class="mt-1 text-xs tracking-widest text-[#a9c9be]">
+                PLAZA SANTA MARÍA
+            </p>
+
+            <nav class="mt-8" aria-label="Menú principal">
+                <p class="mb-3 text-xs font-bold tracking-widest text-[#e9cb85]">
+                    TU ESPACIO
+                </p>
+
+                <ul class="space-y-1 text-sm">
+                    <li>
+                        <a href="{{ url_for('inicio') }}"
+                           class="navLink {% if page == 'inicio' %}bg-[#275150] font-semibold{% endif %}">
+                            Inicio
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('cobrarBaños') }}"
+                           class="navLink {% if page == 'banos' %}bg-[#275150] font-semibold{% endif %}">
+                            Cobros de baños
+                        </a>
+                    </li>
+                    <li class="px-4 py-2 text-[#d0e3dc]">Parqueo</li>
+                    <li class="px-4 py-2 text-[#d0e3dc]">Cobros a mercaderes</li>
+                    <li class="px-4 py-2 text-[#d0e3dc]">Caja y gastos</li>
+                    <li>
+                        <a href="{{ url_for('consultarInventario') }}"
+                           class="navLink {% if page == 'inventario' %}bg-[#275150] font-semibold{% endif %}">
+                            Inventario de papel
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('consultarRutas') }}"
+                           class="navLink {% if page == 'rutas' %}bg-[#275150] font-semibold{% endif %}">
+                            Rutas de la plaza
+                        </a>
+                    </li>
+
+                    {% if isAdmin %}
+                        <li class="px-4 py-2 text-[#d0e3dc]">Reportes</li>
+                        <li class="px-4 py-2 text-[#d0e3dc]">Gestionar mercaderes</li>
+                        <li>
+                            <a href="{{ url_for('consultarInventario') }}#ingresarPapel"
+                               class="navLink">
+                                Ingresar rollos de papel
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="px-4 py-2 text-[#d0e3dc]">Reporte del día</li>
+                    {% endif %}
+                </ul>
+            </nav>
+
+            <form method="post" action="{{ url_for('cerrarSesion') }}"
+                  class="mt-auto pt-8">
+                <button type="submit"
+                        class="w-full rounded-xl border border-[#52716f] px-4 py-2.5 text-sm font-semibold hover:bg-[#275150]">
+                    Cerrar sesión
+                </button>
+            </form>
+        </aside>
+
+        <main class="min-w-0 p-6 sm:p-10">
+            <header class="flex flex-wrap items-center justify-between gap-3">
+                <p class="text-sm text-[#506965]">
+                    Tu espacio / {{ titles[page] }}
+                </p>
+                <span class="rounded-full bg-[#e7eee6] px-4 py-2 text-sm font-semibold">
+                    {{ role | capitalize }}
+                </span>
+            </header>
+
+            {% if message %}
+                <p role="status" class="mt-6 rounded-xl bg-emerald-50 p-4 text-emerald-900">
+                    {{ message }}
+                </p>
+            {% endif %}
+
+            {% if error %}
+                <p role="alert" class="mt-6 rounded-xl bg-red-50 p-4 text-red-800">
+                    {{ error }}
+                </p>
+            {% endif %}
+
+            <section class="mt-8 rounded-3xl border border-[#dce5db] bg-white p-6 sm:p-9">
+
+                {% if page == "banos" %}
+                    <p class="text-xs font-bold tracking-widest text-[#506965]">
+                        SERVICIOS
+                    </p>
+                    <h1 class="mt-3 text-3xl font-bold">Cobros de baños</h1>
+                    <p class="mt-3 text-[#506965]">
+                        Elegí el servicio y confirmá el cobro.
+                    </p>
+
+                    <div class="mt-6 grid gap-4 lg:grid-cols-3">
+                        {% for code, label, price, detail in [
+                            (1, "Sanitario: 1 unidad", 10, "Incluye 1 unidad de papel"),
+                            (2, "Sanitario: 2 unidades", 20, "Incluye 2 unidades de papel"),
+                            (3, "Urinario para varones", 5, "No consume papel")
+                        ] %}
+                            <article class="card flex flex-col">
+                                <h2 class="font-bold">{{ label }}</h2>
+                                <p class="mt-2 text-sm text-[#506965]">{{ detail }}</p>
+                                <p class="my-5 text-3xl font-bold">
+                                    C${{ "%.2f"|format(price) }}
+                                </p>
+
+                                <form method="post" action="{{ url_for('cobrarBaños') }}"
+                                      class="mt-auto"
+                                      onsubmit="return confirm('¿Confirmás el cobro de {{ label }} por C${{ price }}?');">
+                                    <input type="hidden" name="service" value="{{ code }}">
+                                    <button type="submit" class="button w-full">
+                                        Cobrar
+                                    </button>
+                                </form>
+                            </article>
+                        {% endfor %}
+                    </div>
+
+                    <h2 class="mt-8 text-xl font-bold">Cobros registrados</h2>
+
+                    {% if sales %}
+                        <div class="mt-4 overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-[#e7eee6]">
+                                    <tr>
+                                        <th class="p-3">Servicio</th>
+                                        <th class="p-3 text-right">Monto</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for sale in sales %}
+                                        <tr class="border-b border-[#dce5db]">
+                                            <td class="p-3">{{ sale["service"] }}</td>
+                                            <td class="p-3 text-right">
+                                                C${{ "%.2f"|format(sale["price"]) }}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="mt-4 text-[#506965]">No hay cobros registrados.</p>
+                    {% endif %}
+
+                    <p class="mt-5 text-xl font-bold">
+                        Total recibido: C${{ "%.2f"|format(total) }}
+                    </p>
+
+                {% elif page == "inventario" %}
+                    <p class="text-xs font-bold tracking-widest text-[#506965]">
+                        RECURSOS DE LA PLAZA
+                    </p>
+                    <h1 class="mt-3 text-3xl font-bold">Inventario de papel</h1>
+
+                    <div class="mt-6 rounded-2xl bg-[#e7eee6] p-6">
+                        <p class="text-sm text-[#506965]">Unidades disponibles</p>
+                        <p class="mt-2 text-5xl font-bold">{{ stock }}</p>
+                        <p class="mt-3 text-sm text-[#506965]">
+                            Cada rollo equivale a 18 unidades de papel.
+                        </p>
+                    </div>
+
+                    {% if isAdmin %}
+                        <form id="ingresarPapel" method="post"
+                              action="{{ url_for('consultarInventario') }}"
+                              class="mt-8 max-w-md">
+                            <h2 class="text-xl font-bold">Ingresar rollos</h2>
+                            <label for="rolls" class="mt-4 block text-sm font-semibold">
+                                Cantidad de rollos
+                            </label>
+                            <input id="rolls" name="rolls" type="number"
+                                   min="1" step="1" required class="field">
+                            <button type="submit" class="button mt-4">
+                                Agregar papel
+                            </button>
+                        </form>
+                    {% endif %}
+
+                {% elif page == "rutas" %}
+                    <p class="text-xs font-bold tracking-widest text-[#506965]">
+                        RECORRIDOS
+                    </p>
+                    <h1 class="mt-3 text-3xl font-bold">Rutas de la plaza</h1>
+                    <p class="mt-3 text-[#506965]">
+                        Elegí de dónde salís y adónde querés llegar.
+                    </p>
+
+                    <form method="get" action="{{ url_for('consultarRutas') }}"
+                          class="mt-6">
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div>
+                                <label for="origin" class="block text-sm font-semibold">
+                                    Origen
+                                </label>
+                                <select id="origin" name="origin" required class="field">
+                                    <option value="">Elegí una zona</option>
+                                    {% for zone in zones %}
+                                        <option value="{{ zone }}"
+                                                {% if zone == origin %}selected{% endif %}>
+                                            {{ zone | capitalize }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div>
+                                <label for="destination" class="block text-sm font-semibold">
+                                    Destino
+                                </label>
+                                <select id="destination" name="destination"
+                                        required class="field">
+                                    <option value="">Elegí una zona</option>
+                                    {% for zone in zones %}
+                                        <option value="{{ zone }}"
+                                                {% if zone == destination %}selected{% endif %}>
+                                            {{ zone | capitalize }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="button mt-5">Buscar ruta</button>
+                    </form>
+
+                    {% if path is not none %}
+                        {% set segments = (path | length) - 1 %}
+                        <div class="mt-6 rounded-2xl bg-[#e7eee6] p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest">
+                                Ruta encontrada
+                            </p>
+                            <p class="mt-2 text-lg font-semibold">
+                                {{ path | join(" → ") }}
+                            </p>
+                            <p class="mt-2 text-sm text-[#506965]">
+                                {{ segments }} {{ "tramo" if segments == 1 else "tramos" }}
+                            </p>
+                        </div>
+                    {% endif %}
+
+                {% else %}
+                    <p class="text-xs font-bold tracking-widest text-[#506965]">
+                        PLAZA SANTA MARÍA
+                    </p>
+                    <h1 class="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+                        {{ "Panel de administración" if isAdmin else "Panel de trabajador" }}
+                    </h1>
+                    <p class="mt-3 max-w-xl text-[#506965]">
+                        {% if isAdmin %}
+                            Revisá los movimientos de la jornada y administrá los recursos de la plaza.
+                        {% else %}
+                            Consultá las opciones para atender los cobros y las tareas de la jornada.
+                        {% endif %}
+                    </p>
+                {% endif %}
+            </section>
+        </main>
+    </div>
+
+{% else %}
+    <main class="mx-auto grid min-h-screen max-w-7xl items-center gap-10 px-5 py-8 sm:px-8 lg:grid-cols-2 lg:gap-16">
+        <section class="flex min-h-72 flex-col justify-between rounded-3xl bg-[#114145] p-7 text-white sm:p-10 lg:min-h-[540px]">
+            <div>
+                <p class="text-xl font-bold">Su Plaza al Día.</p>
+                <p class="mt-1 text-xs tracking-widest text-[#a9c9be]">
+                    PLAZA SANTA MARÍA
+                </p>
+            </div>
+
+            <div class="my-10">
+                <p class="mb-4 text-xs font-bold tracking-widest text-[#e9cb85]">
+                    CADA JORNADA, MEJOR ORGANIZADA
+                </p>
+                <p class="text-4xl font-semibold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+                    Todo en orden.
+                    <span class="block text-[#b7d9ca]">Tu plaza, al día.</span>
+                </p>
+                <p class="mt-5 max-w-sm text-sm leading-relaxed text-[#d0e3dc]">
+                    Un solo lugar para los cobros, el parqueo y el cierre de cada jornada.
+                </p>
+            </div>
+
+            <p class="text-xs text-[#b7d9ca]">
+                Plaza Santa María · Managua, Nicaragua
+            </p>
+        </section>
+
+        <section class="mx-auto w-full max-w-sm" aria-labelledby="loginTitle">
+            <p class="text-xs font-semibold tracking-widest text-[#506965]">
+                BIENVENIDO DE NUEVO
+            </p>
+            <h1 id="loginTitle" class="mt-2 text-3xl font-bold tracking-tight">
+                Comencemos el día.
+            </h1>
+            <p class="mt-2 text-sm text-[#506965]">
+                Ingresá con tu cuenta de trabajador o administrador.
+            </p>
+
+            <form method="post" action="{{ url_for('inicio') }}" class="mt-8 space-y-5">
+                {% if error %}
+                    <p role="alert" class="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">
+                        {{ error }}
+                    </p>
+                {% endif %}
+
+                <div>
+                    <label for="username" class="block text-sm font-semibold">Usuario</label>
+                    <input id="username" name="username" type="text"
+                           value="{{ username }}" autocomplete="username"
+                           required class="field">
+                </div>
+
+                <div>
+                    <label for="password" class="block text-sm font-semibold">Contraseña</label>
+                    <input id="password" name="password" type="password"
+                           autocomplete="current-password" required class="field">
+                </div>
+
+                <button type="submit" class="button w-full">
+                    Ingresar a la plaza →
+                </button>
+            </form>
+
+            <p class="mt-5 text-center text-xs text-[#506965]">
+                Acceso para personal autorizado.
+            </p>
+        </section>
+    </main>
+{% endif %}
+</body>
+</html>

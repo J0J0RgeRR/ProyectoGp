@@ -1,3 +1,15 @@
+def validarUsuario(username, password):
+    username = username.strip()
+
+    if username == "admin" and password == "admin123":
+        return "administrador"
+
+    if username == "trabajador" and password == "trabajador123":
+        return "trabajador"
+
+    return None
+
+
 def iniciarSesion():
     while True:
         print("\n--- INICIAR SESIÓN ---")
@@ -7,15 +19,14 @@ def iniciarSesion():
 
         if username == "" or password.strip() == "":
             print("Debe completar ambos campos.")
-
-        elif username == "admin" and password == "admin123":
-            return "administrador"
-
-        elif username == "trabajador" and password == "trabajador123":
-            return "trabajador"
-
         else:
+            role = validarUsuario(username, password)
+
+            if role is not None:
+                return role
+
             print("Usuario o contraseña incorrectos.")
+
 
 def mostrarMenu(role):
     if role != "administrador" and role != "trabajador":
@@ -34,11 +45,11 @@ def mostrarMenu(role):
             print("6. Reportes diarios, semanales, quincenales y mensuales")
         else:
             print("6. Reporte del dia actual")
+
         print("7. Consultar inventario de papel")
         print("8. Finalizar el programa")
 
         if role == "administrador":
-
             print("9. Gestionar mercaderes")
             print("10. Ingresar rollos de papel")
             limit = 10
