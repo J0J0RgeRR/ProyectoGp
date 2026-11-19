@@ -3,17 +3,67 @@ from secrets import token_hex
 from flask import Flask, redirect, render_template, request, session, url_for
 
 import bathrooms
+import cash
+import expenses
 import paper
 import parking
 import rutas
 import users
+
 
 app = Flask(__name__)
 app.secret_key = token_hex(32)
 
 stock = 0
 sales = []
+expenseRecords = []
 
+currentCash = None
+cashClosings = []
+
+
+def obtenerResumen():
+    if currentCash is None:
+        return None
+
+    bathroomIncome = (
+        bathrooms.calcularTotalCobros(sales)
+        - currentCash["bathroomStart"]
+    )
+
+    records, parkingTotal = parking.consultarCobros()
+    parkingIncome = parkingTotal - currentCash["parkingStart"]
+
+    totalExpenses = 0
+
+    for expense in expenseRecords[currentCash["expenseStart"]:]:
+        totalExpenses += expense["amount"]
+
+    return cash.resumirCaja(
+        currentCash["initialAmount"],
+        bathroomIncome,
+        parkingIncome,
+        0,
+        round(totalExpenses, 2)
+    )
+
+
+def validarCaja():
+    if currentCash is None:
+        return "Primero abrí la caja desde Caja y gastos."
+
+    if request.form.get("cashToken") != currentCash["token"]:
+        return "La caja cambió. Recargá la página e intentá nuevamente."
+
+    return None
+
+
+@app.context_processor
+def compartirCaja():
+    return {
+        "cashOpen": currentCash is not None,
+        "cashToken": currentCash["token"] if currentCash else ""
+    }
 
 @app.route("/", methods=["GET", "POST"])
 def inicio():
@@ -44,7 +94,6 @@ def inicio():
         username=username
     )
 
-
 @app.route("/baños", methods=["GET", "POST"])
 def cobrarBaños():
     global stock
@@ -63,7 +112,11 @@ def cobrarBaños():
         except ValueError:
             option = 0
 
-        if option not in (1, 2, 3):
+        error = validarCaja()
+
+        if error is not None:
+            pass
+        elif option not in (1, 2, 3):
             error = "Seleccioná un servicio válido."
         else:
             price = bathrooms.calcularPrecio(option)
@@ -83,13 +136,15 @@ def cobrarBaños():
             else:
                 stock = paper.descontarPapel(stock, units)
 
-                sale = {
+                sales.append({
                     "service": service,
                     "price": price
-                }
+                })
 
-                sales.append(sale)
-                session["bathroomMessage"] = f"Cobro confirmado: C${price:.2f}"
+                session["bathroomMessage"] = (
+                    f"Cobro confirmado: C${price:.2f}"
+                )
+
                 return redirect(url_for("cobrarBaños"))
 
     return render_template(
@@ -126,9 +181,11 @@ def consultarInventario():
                 error = "La cantidad de rollos debe ser mayor que cero."
             else:
                 stock = paper.agregarRollos(stock, rolls)
+
                 session["inventoryMessage"] = (
                     f"Se agregaron {rolls} rollos: {rolls * 18} unidades."
                 )
+
                 return redirect(url_for("consultarInventario"))
 
         except ValueError:
@@ -163,7 +220,7 @@ def consultarRutas():
             path = rutas.buscarRuta(origin, destination)
 
             if path is None:
-                error = "No hay un recorrido entre esas dos zonas."
+                error = "No hay un recorrido entre esas zonas."
 
     return render_template(
         "index.html",
@@ -204,21 +261,22 @@ def gestionarParqueo():
                 request.form.get("ticket", "")
             )
 
-            message = "Vehículo retirado de la fila. No se realizó ningún cobro."
+            message = "Vehículo retirado de la fila sin cobrar."
 
         elif action == "atender":
-            record, error = parking.atenderSiguiente(
-                request.form.get("days", "1"),
-                request.form.get("ticket", ""),
-                True
-            )
+            error = validarCaja()
 
             if error is None:
-                message = (
-                    f"Vehículo atendido. "
-                    f"Cobro confirmado: C$ {record['total']:.2f}"
+                record, error = parking.atenderSiguiente(
+                    request.form.get("days", "1"),
+                    request.form.get("ticket", ""),
+                    True
                 )
 
+                if error is None:
+                    message = (
+                        f"Cobro confirmado: C${record['total']:.2f}"
+                    )
         else:
             error = "Seleccioná una operación válida."
 
@@ -233,7 +291,9 @@ def gestionarParqueo():
 
     if first is not None:
         charge, chargeError = parking.calcularCobro(
-            first["tipo"], first["modalidad"], 1
+            first["tipo"],
+            first["modalidad"],
+            1
         )
 
         if chargeError is None:
@@ -252,6 +312,110 @@ def gestionarParqueo():
         unitPrice=unitPrice,
         history=history,
         totalParking=totalParking
+    )
+
+
+@app.route("/gastos", methods=["GET", "POST"])
+def gestionarGastos():
+    global currentCash
+
+    role = session.get("role")
+
+    if role not in ("administrador", "trabajador"):
+        return redirect(url_for("inicio"))
+
+    error = None
+    message = session.pop("expenseMessage", None)
+
+    if request.method == "POST":
+        action = request.form.get("action", "")
+
+        if action == "abrir":
+            if currentCash is not None:
+                error = "Ya hay una caja abierta."
+            else:
+                amount, error = cash.validarMonto(
+                    request.form.get("initialAmount", "")
+                )
+
+                if error is None:
+                    records, parkingTotal = parking.consultarCobros()
+
+                    currentCash = {
+                        "initialAmount": amount,
+                        "bathroomStart": bathrooms.calcularTotalCobros(sales),
+                        "parkingStart": parkingTotal,
+                        "expenseStart": len(expenseRecords),
+                        "token": token_hex(8)
+                    }
+
+                    message = "Caja abierta correctamente."
+
+        elif action in ("gasto", "cerrar"):
+            error = validarCaja()
+
+            if error is None:
+                summary = obtenerResumen()
+
+                if action == "gasto":
+                    amount, error = cash.validarMonto(
+                        request.form.get("amount", "")
+                    )
+
+                    if error is None:
+                        if amount > summary["balance"]:
+                            error = (
+                                "El gasto supera el saldo disponible en caja."
+                            )
+                        else:
+                            saved, result = expenses.guardarGasto(
+                                expenseRecords,
+                                amount,
+                                request.form.get("description", "")
+                            )
+
+                            if saved:
+                                message = result
+                            else:
+                                error = result
+                else:
+                    countedCash, error = cash.validarMonto(
+                        request.form.get("countedCash", "")
+                    )
+
+                    if error is None:
+                        summary["countedCash"] = countedCash
+                        summary["difference"] = cash.calcularDiferencia(
+                            summary["balance"],
+                            countedCash
+                        )
+
+                        cashClosings.append(summary)
+                        currentCash = None
+                        message = (
+                            "Caja cerrada. Revisá el resultado del cierre."
+                        )
+        else:
+            error = "Seleccioná una operación válida."
+
+        if error is None:
+            session["expenseMessage"] = message
+            return redirect(url_for("gestionarGastos"))
+
+    currentExpenses = []
+
+    if currentCash is not None:
+        currentExpenses = expenseRecords[currentCash["expenseStart"]:]
+
+    return render_template(
+        "index.html",
+        role=role,
+        page="gastos",
+        error=error,
+        message=message,
+        summary=obtenerResumen(),
+        currentExpenses=currentExpenses,
+        cashClosings=cashClosings
     )
 
 
