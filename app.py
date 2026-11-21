@@ -4,6 +4,7 @@ from flask import Flask, redirect, render_template, request, session, url_for
 import bathrooms
 import cash
 import expenses
+import merchants
 import paper
 import parking
 import rutas
@@ -22,7 +23,8 @@ cashClosings = []
 
 def obtenerResumen():
     records, parkingTotal = parking.consultarCobros()
-    summary = cash.consultarResumen(currentCash, sales, parkingTotal, expenseRecords)
+    merchantPayments, merchantTotal = merchants.consultarPagos()
+    summary = cash.consultarResumen(currentCash, sales, parkingTotal, merchantTotal, expenseRecords)
 
     return summary
 
@@ -243,6 +245,93 @@ def gestionarParqueo():
     )
 
 
+@app.route("/comerciantes", methods=["GET", "POST"])
+def gestionarComerciantes():
+    role = session.get("role")
+
+    if role not in ("administrador", "trabajador"):
+        return redirect(url_for("inicio"))
+
+    error = None
+    message = session.pop("merchantMessage", None)
+
+    if request.method == "POST":
+        action = request.form.get("action", "")
+        local = request.form.get("local", "")
+
+        if action == "pagar":
+            error = validarCaja()
+
+            if error is None:
+                amount = request.form.get("amount", "")
+
+                payment, error = merchants.registrarPago(local, amount)
+
+                if error is None:
+                    message = f"Pago confirmado: C${payment['amount']:.2f}"
+
+        elif role != "administrador":
+            return "Solo el administrador puede gestionar comerciantes.", 403
+
+        elif action == "registrar":
+            name = request.form.get("name", "")
+            business = request.form.get("business", "")
+            phone = request.form.get("phone", "")
+            rent = request.form.get("rent", "")
+
+            error = merchants.registrarComerciante(local, name, business, phone, rent)
+            message = "Comerciante registrado correctamente."
+
+        elif action == "modificar":
+            name = request.form.get("name", "")
+            business = request.form.get("business", "")
+            phone = request.form.get("phone", "")
+            rent = request.form.get("rent", "")
+
+            error = merchants.modificarComerciante(local, name, business, phone, rent)
+            message = "Comerciante actualizado correctamente."
+
+        elif action == "eliminar":
+            error = merchants.eliminarComerciante(local)
+            message = "Comerciante eliminado del árbol."
+
+        elif action == "cobroMensual":
+            charged, error = merchants.generarCobroMensual()
+            message = f"Cobro mensual generado para {charged} comerciantes."
+
+        else:
+            error = "Seleccioná una operación válida."
+
+        if error is None:
+            session["merchantMessage"] = message
+            return redirect(url_for("gestionarComerciantes"))
+
+        message = None
+
+    search = request.args.get("search", "").strip()
+    found = None
+
+    if search != "":
+        found = merchants.buscarComerciante(search)
+
+        if found is None:
+            error = "No hay ningún comerciante en ese local."
+
+    merchantList = merchants.consultarComerciantes()
+    debtors, totalDebt = merchants.consultarMorosos()
+    merchantPayments, totalPayments = merchants.consultarPagos()
+
+    return render_template(
+        "index.html", role=role, page="comerciantes",
+        error=error, message=message, merchantList=merchantList,
+        debtors=debtors, totalDebt=totalDebt,
+        merchantPayments=merchantPayments, totalPayments=totalPayments,
+        expectedIncome=merchants.calcularIngresosEsperados(),
+        treeHeight=merchants.consultarAltura(),
+        search=search, found=found
+    )
+
+
 @app.route("/gastos", methods=["GET", "POST"])
 def gestionarGastos():
     global currentCash
@@ -261,9 +350,10 @@ def gestionarGastos():
         if action == "abrir":
             initialAmount = request.form.get("initialAmount", "")
             records, parkingTotal = parking.consultarCobros()
+            merchantPayments, merchantTotal = merchants.consultarPagos()
             token = token_hex(8)
 
-            currentCash, error = cash.iniciarCaja(currentCash, initialAmount, sales, parkingTotal, expenseRecords, token)
+            currentCash, error = cash.iniciarCaja(currentCash, initialAmount, sales, parkingTotal, merchantTotal, expenseRecords, token)
             message = "Caja abierta correctamente."
 
         elif action in ("gasto", "cerrar"):

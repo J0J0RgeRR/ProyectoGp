@@ -18,7 +18,7 @@ def validarCaja(currentCash, token):
     return None
 
 
-def iniciarCaja(currentCash, value, sales, parkingTotal, expenseRecords, token):
+def iniciarCaja(currentCash, value, sales, parkingTotal, merchantTotal, expenseRecords, token):
     if currentCash is not None:
         return currentCash, "Ya hay una caja abierta."
 
@@ -34,6 +34,7 @@ def iniciarCaja(currentCash, value, sales, parkingTotal, expenseRecords, token):
         "initialAmount": amount,
         "bathroomStart": bathroomTotal,
         "parkingStart": parkingTotal,
+        "merchantStart": merchantTotal,
         "expenseStart": expenseStart,
         "token": token
     }
@@ -74,17 +75,18 @@ def resumirCaja(initialAmount, bathroomIncome, parkingIncome, merchantIncome, to
     return summary
 
 
-def consultarResumen(currentCash, sales, parkingTotal, expenseRecords):
+def consultarResumen(currentCash, sales, parkingTotal, merchantTotal, expenseRecords):
     if currentCash is None:
         return None
 
     bathroomIncome = bathrooms.calcularTotalCobros(sales) - currentCash["bathroomStart"]
     parkingIncome = parkingTotal - currentCash["parkingStart"]
+    merchantIncome = round(merchantTotal - currentCash["merchantStart"], 2)
 
     currentExpenses = expenseRecords[currentCash["expenseStart"]:]
     totalExpenses = expenses.calcularTotalGastos(currentExpenses)
 
-    summary = resumirCaja(currentCash["initialAmount"], bathroomIncome, parkingIncome, 0, totalExpenses)
+    summary = resumirCaja(currentCash["initialAmount"], bathroomIncome, parkingIncome, merchantIncome, totalExpenses)
 
     return summary
 
