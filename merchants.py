@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 import expenses
 
@@ -6,15 +6,16 @@ root = None
 payments = []
 
 
-def crearNodo(local, name, business, phone, rent):
+def crearNodo(local, name, business, phone, rent, frequency):
     node = {
         "local": local,
         "name": name,
         "business": business,
         "phone": phone,
         "rent": rent,
+        "frequency": frequency,
         "balance": 0.0,
-        "chargedMonth": "",
+        "chargedPeriods": [],
         "left": None,
         "right": None
     }
@@ -22,10 +23,11 @@ def crearNodo(local, name, business, phone, rent):
     return node
 
 
-def validarDatos(name, business, phone, rent):
+def validarDatos(name, business, phone, rent, frequency):
     name = name.strip()
     business = business.strip()
     phone = phone.strip()
+    frequency = frequency.strip().lower()
 
     if name == "" or business == "" or phone == "":
         return None, "Completá el nombre, el giro y el teléfono."
@@ -34,12 +36,15 @@ def validarDatos(name, business, phone, rent):
 
     for character in phone:
         if character.isdigit():
-            digits += 1
+            digits = digits + 1
         elif character not in "+- ":
             return None, "El teléfono solo puede tener números, espacios, + o -."
 
     if digits < 8:
         return None, "El teléfono debe tener al menos 8 dígitos."
+
+    if frequency != "diario" and frequency != "semanal":
+        return None, "Seleccioná cobro diario o semanal."
 
     amount, error = expenses.validarMonto(rent)
 
@@ -47,13 +52,14 @@ def validarDatos(name, business, phone, rent):
         return None, error
 
     if amount <= 0:
-        return None, "La renta mensual debe ser mayor que cero."
+        return None, "El monto del cobro debe ser mayor que cero."
 
     data = {
         "name": name,
         "business": business,
         "phone": phone,
-        "rent": amount
+        "rent": amount,
+        "frequency": frequency
     }
 
     return data, None
@@ -115,7 +121,10 @@ def eliminarNodo(current, local):
         while successor["left"] is not None:
             successor = successor["left"]
 
-        for field in ("local", "name", "business", "phone", "rent", "balance", "chargedMonth"):
+        for field in (
+            "local", "name", "business", "phone", "rent",
+            "frequency", "balance", "chargedPeriods"
+        ):
             current[field] = successor[field]
 
         current["right"] = eliminarNodo(current["right"], successor["local"])
@@ -142,7 +151,7 @@ def calcularAltura(current):
     return 1 + max(left, right)
 
 
-def registrarComerciante(local, name, business, phone, rent):
+def registrarComerciante(local, name, business, phone, rent, frequency):
     global root
 
     local = normalizarLocal(local)
@@ -153,32 +162,37 @@ def registrarComerciante(local, name, business, phone, rent):
     if buscarComerciante(local) is not None:
         return "Ese local ya tiene un comerciante registrado."
 
-    data, error = validarDatos(name, business, phone, rent)
+    data, error = validarDatos(name, business, phone, rent, frequency)
 
     if error is not None:
         return error
 
-    node = crearNodo(local, data["name"], data["business"], data["phone"], data["rent"])
+    node = crearNodo(local, data["name"], data["business"], data["phone"], data["rent"], data["frequency"])
     root = insertarNodo(root, node)
 
     return None
 
 
-def modificarComerciante(local, name, business, phone, rent):
+def modificarComerciante(local, name, business, phone, rent, frequency):
     node = buscarComerciante(local)
 
     if node is None:
         return "El local no existe."
 
-    data, error = validarDatos(name, business, phone, rent)
+    data, error = validarDatos(name, business, phone, rent, frequency)
 
     if error is not None:
         return error
+
+    if data["frequency"] != node["frequency"] and len(node["chargedPeriods"]) > 0:
+        return "No se puede cambiar la modalidad de un comerciante que ya tiene cobros registrados."
 
     node["name"] = data["name"]
     node["business"] = data["business"]
     node["phone"] = data["phone"]
     node["rent"] = data["rent"]
+
+    node["frequency"] = data["frequency"]
 
     return None
 
@@ -213,32 +227,40 @@ def consultarMorosos():
     for node in consultarComerciantes():
         if node["balance"] > 0:
             debtors.append(node)
-            total += node["balance"]
+            total = total + node["balance"]
 
     total = round(total, 2)
 
     return debtors, total
 
 
-def generarCobroMensual():
-    records = consultarComerciantes()
+def obtenerPeriodo(frequency):
+    today = date.today()
 
-    if len(records) == 0:
-        return 0, "No hay comerciantes registrados."
+    if frequency == "diario":
+        period = today.isoformat()
+    else:
+        monday = today - timedelta(days=today.weekday())
+        period = monday.isoformat()
 
-    month = date.today().strftime("%Y-%m")
-    charged = 0
+    return period
 
-    for node in records:
-        if node["chargedMonth"] != month:
-            node["balance"] = round(node["balance"] + node["rent"], 2)
-            node["chargedMonth"] = month
-            charged += 1
 
-    if charged == 0:
-        return 0, "El cobro de este mes ya fue generado."
+def generarCobro(local):
+    node = buscarComerciante(local)
 
-    return charged, None
+    if node is None:
+        return "El local no existe."
+
+    period = obtenerPeriodo(node["frequency"])
+
+    if period in node["chargedPeriods"]:
+        return "El cobro de este período ya fue generado."
+
+    node["balance"] = round(node["balance"] + node["rent"], 2)
+    node["chargedPeriods"].append(period)
+
+    return None
 
 
 def registrarPago(local, value):
@@ -266,7 +288,9 @@ def registrarPago(local, value):
     payment = {
         "local": node["local"],
         "name": node["name"],
-        "amount": amount
+        "amount": amount,
+        "date": date.today().isoformat(),
+        "frequency": node["frequency"]
     }
 
     payments.append(payment)
@@ -278,7 +302,7 @@ def consultarPagos():
     total = 0
 
     for payment in payments:
-        total += payment["amount"]
+        total = total + payment["amount"]
 
     total = round(total, 2)
 
@@ -286,15 +310,6 @@ def consultarPagos():
 
 
 def consultarAltura():
-    return calcularAltura(root)
+    height = calcularAltura(root)
 
-
-def calcularIngresosEsperados():
-    total = 0
-
-    for node in consultarComerciantes():
-        total += node["rent"]
-
-    total = round(total, 2)
-
-    return total
+    return height
