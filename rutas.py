@@ -1,9 +1,6 @@
-
 from collections import deque
-
 # Aquí guardamos las zonas de la plaza y sus conexiones
 grafo = {}
-
 
 # Agregamos una zona nueva a la plaza
 def agregar_zona(grafo, zona):
@@ -12,7 +9,6 @@ def agregar_zona(grafo, zona):
         return True
 
     return False
-
 
 # Conectamos dos zonas de la plaza
 def conectar_zonas(grafo, origen, destino):
@@ -30,7 +26,6 @@ def conectar_zonas(grafo, origen, destino):
 
     return True
 
-
 # Consultamos las zonas que tienen conexión directa
 def consultar_zonas_conectadas(grafo, zona):
     if zona not in grafo:
@@ -38,17 +33,14 @@ def consultar_zonas_conectadas(grafo, zona):
 
     return grafo[zona][:]
 
-
 # Revisamos si existe un camino directo entre dos zonas
 def verificar_conexion(grafo, origen, destino):
     return origen in grafo and destino in grafo[origen]
-
 
 # Mostramos las zonas y sus conexiones
 def mostrar_conexiones(grafo):
     for zona, conexiones in grafo.items():
         print(zona, "->", conexiones)
-
 
 # Buscamos el recorrido con menos tramos entre dos zonas
 def buscarRuta(origen, destino):
@@ -71,7 +63,6 @@ def buscarRuta(origen, destino):
     visitados = {origen}
 
     while cola:
-
         ruta = cola.popleft()
         zona_actual = ruta[-1]
 
@@ -89,7 +80,6 @@ def buscarRuta(origen, destino):
 
     print("\nNo existe un camino entre esas dos zonas.")
     return None
-
 
 # Registramos las zonas y los caminos de la plaza
 def crear_grafo():
@@ -116,12 +106,9 @@ def crear_grafo():
     for origen, destino in conexiones:
         conectar_zonas(grafo, origen, destino)
 
-
 # Consultamos una ruta desde la terminal
 def consultar_ruta():
-
     print("\n========== CONSULTA DE RUTAS ==========")
-
     print("\nZonas disponibles:")
     mostrar_conexiones(grafo)
 
@@ -138,7 +125,6 @@ def consultar_ruta():
 
 # Preparamos las zonas de la plaza
 crear_grafo()
-
 
 if __name__ == "__main__":
     consultar_ruta()

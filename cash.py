@@ -7,6 +7,14 @@ def validarMonto(value):
 
     return amount, error
 
+def abrirCaja():
+    while True:
+        amount, error = validarMonto(input("Ingrese el monto inicial de caja: C$"))
+
+        if error is None:
+            return amount
+        else:
+            print(error)
 
 def validarCaja(currentCash, token):
     if currentCash is None:
@@ -108,17 +116,6 @@ def finalizarCaja(currentCash, cashClosings, value, summary):
     cashClosings.append(summary)
 
     return None, None
-
-
-def abrirCaja():
-    while True:
-        amount, error = validarMonto(input("Ingrese el monto inicial de caja: C$"))
-
-        if error is None:
-            return amount
-        else:
-            print(error)
-
 
 def cerrarCaja(expectedBalance):
     while True:

@@ -1,6 +1,6 @@
 def validarMonto(value):
     try:
-        amount = float(value)
+        amount = float(value)   
 
         if amount >= 0:
             amount = round(amount, 2)
@@ -10,6 +10,16 @@ def validarMonto(value):
 
     except ValueError:
         return None, "Ingrese un número válido."
+
+
+def solicitarDescripcion():
+    while True:
+        description = input("Descripción del gasto: ").strip()
+
+        if description != "":
+            return description
+
+        print("Debe ingresar una descripción del gasto realizado.")
 
 
 def guardarGasto(expenses, amount, description, balance=None):
@@ -29,10 +39,7 @@ def guardarGasto(expenses, amount, description, balance=None):
     if balance is not None and amount > balance:
         return False, "El gasto supera el saldo disponible en caja."
 
-    expense = {
-        "amount": amount,
-        "description": description
-    }
+    expense = {"amount": amount,"description": description}
 
     expenses.append(expense)
 
@@ -62,20 +69,9 @@ def solicitarMonto():
         else:
             print("El monto debe ser mayor que cero.")
 
-
-def solicitarDescripcion():
-    while True:
-        description = input("Descripción del gasto: ").strip()
-
-        if description != "":
-            return description
-
-        print("Debe ingresar una descripción del gasto realizado.")
-
-
 def confirmarGasto(amount, description):
     while True:
-        print("\n--- CONFIRMAR GASTO ---")
+        print("--- CONFIRMAR GASTO ---")
         print(f"Monto: C${amount:.2f}")
         print(f"Descripción: {description}")
         print("1. Confirmar")

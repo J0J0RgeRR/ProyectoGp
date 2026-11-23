@@ -60,7 +60,7 @@ def guardarCobro(stock, sales, option):
 
     stock = paper.descontarPapel(stock, units)
 
-    sale = {  "service": service,"price": price}
+    sale = {"service": service,"price": price}
 
     sales.append(sale)
 

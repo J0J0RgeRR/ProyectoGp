@@ -153,10 +153,7 @@ def mostrar_cobros():
         return
 
     for record in records:
-        print(
-            f"{record['identificador']} | "
-            f"{record['tipo']} | {record['modalidad']}"
-        )
+        print(f"{record['identificador']} | "f"{record['tipo']} | {record['modalidad']}" )
 
         if record["modalidad"] == "DIA":
             print(f"Días: {record['cantidad']}")
@@ -226,10 +223,7 @@ def seleccionar_servicio():
                 print("No hay vehículos pendientes.")
                 continue
 
-            print(
-                f"Vehículo: {current['tipo']} | "
-                f"{current['identificador']} | {current['modalidad']}"
-            )
+            print( f"Vehículo: {current['tipo']} | "f"{current['identificador']} | {current['modalidad']}")
 
             quantity = 1
 
