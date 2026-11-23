@@ -1,4 +1,5 @@
 import paper
+from datetime import date 
 
 
 def seleccionarServicio():
@@ -60,7 +61,7 @@ def guardarCobro(stock, sales, option):
 
     stock = paper.descontarPapel(stock, units)
 
-    sale = {"service": service,"price": price}
+    sale = {"service": service,"price": price, "date": date.today().isoformat()}
 
     sales.append(sale)
 

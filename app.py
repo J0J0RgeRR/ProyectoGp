@@ -1,9 +1,13 @@
 from secrets import token_hex
-from flask import Flask, redirect, render_template, request, session, url_for
+from datetime import date
+from copy import deepcopy
+from flask import Flask, redirect, render_template, request, session, url_for, g, jsonify
 
 import bathrooms
 import cash
 import expenses
+import files
+import reports
 import merchants
 import paper
 import parking
@@ -21,9 +25,111 @@ currentCash = None
 cashClosings = []
 
 
+def obtenerDatos():
+    history, total = parking.consultarCobros()
+    parkingRecords = []
+
+    for record in history:
+        item = record.copy()
+        item.pop("siguiente", None)
+        parkingRecords.append(item)
+
+    data = {
+        "stock": stock,
+        "sales": sales,
+        "expenseRecords": expenseRecords,
+        "currentCash": currentCash,
+        "cashClosings": cashClosings,
+        "parkingWaiting": parking.consultarPendientes(),
+        "parkingRecords": parkingRecords,
+        "nextTicket": parking.nextTicket,
+        "merchantRoot": merchants.root,
+        "merchantPayments": merchants.payments
+    }
+
+    return data
+
+
+def aplicarDatos(data):
+    global stock, sales, expenseRecords, currentCash, cashClosings
+
+    stock = data["stock"]
+    sales = data["sales"]
+    expenseRecords = data["expenseRecords"]
+    currentCash = data["currentCash"]
+    cashClosings = data["cashClosings"]
+    merchants.root = data["merchantRoot"]
+    merchants.payments = data["merchantPayments"]
+    parking.nextTicket = data["nextTicket"]
+
+    parking.pendientes.clear()
+    parking.pendientes.extend(data["parkingWaiting"])
+
+    parking.cabeza = None
+    last = None
+
+    for record in data["parkingRecords"]:
+        record["siguiente"] = None
+
+        if last is None:
+            parking.cabeza = record
+        else:
+            last["siguiente"] = record
+
+        last = record
+
+
+def cargarEstado():
+    data, error = files.cargarDatos("sistema.json")
+
+    if error is not None:
+        raise RuntimeError(error)
+
+    if data is not None:
+        if not isinstance(data, dict):
+            raise RuntimeError("El archivo sistema.json no tiene el formato esperado.")
+
+        requiredFields = obtenerDatos()
+
+        for field in requiredFields:
+            if field not in data:
+                raise RuntimeError("Falta el campo " + field + " en sistema.json.")
+
+        aplicarDatos(data)
+
+
+@app.before_request
+def prepararOperacion():
+    if request.method == "POST" and request.endpoint in ("cobrarBaños", "consultarInventario", "gestionarParqueo", "gestionarComerciantes", "gestionarGastos"):
+        g.previousData = deepcopy(obtenerDatos())
+
+
+@app.after_request
+def guardarOperacion(response):
+    if hasattr(g, "previousData"):
+        if response.status_code == 302 and session.get("role") in ("administrador", "trabajador"):
+            error = files.guardarDatos("sistema.json", obtenerDatos())
+
+            if error is not None:
+                aplicarDatos(g.previousData)
+
+                session.pop("bathroomMessage", None)
+                session.pop("inventoryMessage", None)
+                session.pop("parkingMessage", None)
+                session.pop("merchantMessage", None)
+                session.pop("expenseMessage", None)
+
+                return app.make_response((error + " La operación fue cancelada. Intentá nuevamente.", 500))
+        else:
+            aplicarDatos(g.previousData)
+
+    return response
+
+
 def obtenerResumen():
     records, parkingTotal = parking.consultarCobros()
     merchantPayments, merchantTotal = merchants.consultarPagos()
+
     summary = cash.consultarResumen(currentCash, sales, parkingTotal, merchantTotal, expenseRecords)
 
     return summary
@@ -136,6 +242,7 @@ def consultarInventario():
                 error = "La cantidad de rollos debe ser mayor que cero."
             else:
                 stock = paper.agregarRollos(stock, rolls)
+
                 session["inventoryMessage"] = f"Se agregaron {rolls} rollos: {rolls * 18} unidades."
 
                 return redirect(url_for("consultarInventario"))
@@ -270,6 +377,10 @@ def gestionarComerciantes():
                 if error is None:
                     message = f"Pago confirmado: C${payment['amount']:.2f}"
 
+        elif action == "generar":
+            error = merchants.generarCobro(local)
+            message = "Cobro generado para el período actual."
+
         elif role != "administrador":
             return "Solo el administrador puede gestionar comerciantes.", 403
 
@@ -278,8 +389,9 @@ def gestionarComerciantes():
             business = request.form.get("business", "")
             phone = request.form.get("phone", "")
             rent = request.form.get("rent", "")
+            frequency = request.form.get("frequency", "")
 
-            error = merchants.registrarComerciante(local, name, business, phone, rent)
+            error = merchants.registrarComerciante(local, name, business, phone, rent, frequency)
             message = "Comerciante registrado correctamente."
 
         elif action == "modificar":
@@ -287,17 +399,14 @@ def gestionarComerciantes():
             business = request.form.get("business", "")
             phone = request.form.get("phone", "")
             rent = request.form.get("rent", "")
+            frequency = request.form.get("frequency", "")
 
-            error = merchants.modificarComerciante(local, name, business, phone, rent)
+            error = merchants.modificarComerciante(local, name, business, phone, rent, frequency)
             message = "Comerciante actualizado correctamente."
 
         elif action == "eliminar":
             error = merchants.eliminarComerciante(local)
             message = "Comerciante eliminado del árbol."
-
-        elif action == "cobroMensual":
-            charged, error = merchants.generarCobroMensual()
-            message = f"Cobro mensual generado para {charged} comerciantes."
 
         else:
             error = "Seleccioná una operación válida."
@@ -326,7 +435,6 @@ def gestionarComerciantes():
         error=error, message=message, merchantList=merchantList,
         debtors=debtors, totalDebt=totalDebt,
         merchantPayments=merchantPayments, totalPayments=totalPayments,
-        expectedIncome=merchants.calcularIngresosEsperados(),
         treeHeight=merchants.consultarAltura(),
         search=search, found=found
     )
@@ -377,6 +485,8 @@ def gestionarGastos():
                 else:
                     countedCash = request.form.get("countedCash", "")
 
+                    summary["date"] = date.today().isoformat()
+
                     currentCash, error = cash.finalizarCaja(currentCash, cashClosings, countedCash, summary)
                     message = "Caja cerrada. Revisá el resultado del cierre."
 
@@ -403,11 +513,49 @@ def gestionarGastos():
     )
 
 
+@app.get("/reportes")
+def consultarReportes():
+    role = session.get("role")
+
+    if role not in ("administrador", "trabajador"):
+        return redirect(url_for("inicio"))
+
+    today = date.today().isoformat()
+    reportType = request.args.get("type", "diario")
+    referenceDate = request.args.get("date", today)
+
+    if role == "trabajador" and (reportType != "diario" or referenceDate != today):
+        return "Solo podés consultar el reporte del día actual.", 403
+
+    parkingRecords, total = parking.consultarCobros()
+    merchantPayments, merchantTotal = merchants.consultarPagos()
+
+    report, error = reports.generarReporte(reportType, referenceDate, sales, parkingRecords, merchantPayments, expenseRecords)
+
+    if error is None and request.args.get("download") == "1":
+        fileName, error = reports.guardarReporte(report)
+
+        if error is None:
+            response = jsonify(report)
+
+            response.headers["Content-Disposition"] = 'attachment; filename="' + fileName.split("/")[-1] + '"'
+
+            return response
+
+    return render_template(
+        "index.html", role=role, page="reportes", report=report,
+        error=error, reportType=reportType, referenceDate=referenceDate
+    )
+
+
 @app.post("/cerrar-sesion")
 def cerrarSesion():
     session.clear()
 
     return redirect(url_for("inicio"))
+
+
+cargarEstado()
 
 
 if __name__ == "__main__":

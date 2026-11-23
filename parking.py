@@ -1,4 +1,5 @@
 from collections import deque
+from datetime import date
 
 TARIFAS = {
     "MOTO": {"RATO": 20, "DIA": 30},
@@ -111,6 +112,7 @@ def atenderSiguiente(quantity, ticket, confirmed=True):
         "cantidad": charge["cantidad"],
         "precio": charge["precio"],
         "total": charge["total"],
+        "date": date.today().isoformat(),
         "siguiente": None
     }
 

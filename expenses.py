@@ -1,3 +1,5 @@
+from datetime import date
+
 def validarMonto(value):
     try:
         amount = float(value)   
@@ -39,7 +41,7 @@ def guardarGasto(expenses, amount, description, balance=None):
     if balance is not None and amount > balance:
         return False, "El gasto supera el saldo disponible en caja."
 
-    expense = {"amount": amount,"description": description}
+    expense = {"amount": amount,"description": description, "date": date.today().isoformat()}
 
     expenses.append(expense)
 
