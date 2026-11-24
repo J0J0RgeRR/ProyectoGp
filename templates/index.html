@@ -536,7 +536,7 @@
                   class="mt-6 flex flex-wrap items-end gap-3">
 
                 <div>
-                    <label for="search">Buscar por local</label>
+                    <label for="search">Buscar por código del local</label>
                     <input id="search" name="search"
                            value="{{ search }}" class="field" required>
                 </div>
@@ -566,7 +566,7 @@
 
                 <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <div>
-                        <label for="local">Local</label>
+                        <label for="local">Código del local</label>
                         <input id="local" name="local"
                                value="{{ found.local if found else '' }}"
                                {% if found %}readonly{% endif %}
@@ -581,7 +581,7 @@
                     </div>
 
                     <div>
-                        <label for="business">Giro del negocio</label>
+                        <label for="business">Tipo de negocio </label>
                         <input id="business" name="business"
                                value="{{ found.business if found else '' }}"
                                required class="field">
